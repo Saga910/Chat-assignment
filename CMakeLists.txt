@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.19)
 
 # Project name and a few useful settings. Other commands can pick up the results
-project(template2
+project(Chat-assignmnet
         VERSION 0.1
         DESCRIPTION ""
         LANGUAGES C)
@@ -23,11 +23,11 @@ set(PROG2_SOURCE_LIST
         )
 
 set(PROG1_MAIN_SOURCE
-        "${template2_SOURCE_DIR}/src/prog1.c"
+        "${template2_SOURCE_DIR}/src/server.c"
         )
 
 set(PROG2_MAIN_SOURCE
-        "${template2_SOURCE_DIR}/src/prog2.c"
+        "${template2_SOURCE_DIR}/src/client.c"
         )
 
 ### Require out-of-source builds
