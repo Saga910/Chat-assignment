@@ -9,11 +9,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define SEND 0
+#define LOGOUT 1
+#define LOGIN 2
+#define GET_USERS 3
+#define CREATE_CHAN 4
+#define JOIN_CHAN 6
+#define LEAVE_CHAN 7
+#define CREATE_PRIVATE_CHAN 8
 
 struct application_settings
 {
     struct dc_opt_settings opts;
-    struct dc_setting_string *message;
+    struct dc_setting_string *IP;
+    struct dc_setting_string *port;
+    struct dc_setting_string *ID;
 };
 
 
@@ -44,7 +54,7 @@ int main(int argc, char *argv[])
     tracer = NULL;
     dc_error_init(&err, reporter);
     dc_posix_env_init(&env, tracer);
-    info = dc_application_info_create(&env, &err, "Settings Application");
+    info = dc_application_info_create(&env, &err, "Chat Application");
     ret_val = dc_application_run(&env, &err, info, create_settings, destroy_settings, run, dc_default_create_lifecycle, dc_default_destroy_lifecycle, NULL, argc, argv);
     dc_application_info_destroy(&env, &info);
     dc_error_reset(&err);
@@ -65,7 +75,9 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
     }
 
     settings->opts.parent.config_path = dc_setting_path_create(env, err);
-    settings->message = dc_setting_string_create(env, err);
+    settings->IP = dc_setting_string_create(env, err);
+    settings->port = dc_setting_string_create(env, err);
+    settings->ID = dc_setting_string_create(env, err);
 
     struct options opts[] = {
             {(struct dc_setting *)settings->opts.parent.config_path,
@@ -78,16 +90,36 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     NULL,
                     dc_string_from_config,
                     NULL},
-            {(struct dc_setting *)settings->message,
+            {(struct dc_setting *)settings->IP,
                     dc_options_set_string,
-                    "message",
+                    "ip",
                     required_argument,
-                    'm',
-                    "MESSAGE",
+                    'i',
+                    "IP",
                     dc_string_from_string,
-                    "message",
+                    "ip",
                     dc_string_from_config,
-                    "Hello, Default World!"},
+                    "127.0.0.1"},
+            {(struct dc_setting *)settings->port,
+                    dc_options_set_string,
+                    "port",
+                    required_argument,
+                    'p',
+                    "PORT",
+                    dc_string_from_string,
+                    "port",
+                    dc_string_from_config,
+                    "8080"},
+            {(struct dc_setting *)settings->ID,
+                    dc_options_set_string,
+                    "id",
+                    required_argument,
+                    'd',
+                    "ID",
+                    dc_string_from_string,
+                    "id",
+                    dc_string_from_config,
+                    "Default"}
     };
 
     // note the trick here - we use calloc and add 1 to ensure the last line is all 0/NULL
@@ -95,8 +127,8 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
     settings->opts.opts_size = sizeof(struct options);
     settings->opts.opts = dc_calloc(env, err, settings->opts.opts_count, settings->opts.opts_size);
     dc_memcpy(env, settings->opts.opts, opts, sizeof(opts));
-    settings->opts.flags = "m:";
-    settings->opts.env_prefix = "DC_EXAMPLE_";
+    settings->opts.flags = "i:p:d";
+    settings->opts.env_prefix = "DC_CHAT_";
 
     return (struct dc_application_settings *)settings;
 }
@@ -109,7 +141,9 @@ static int destroy_settings(const struct dc_posix_env *env,
 
     DC_TRACE(env);
     app_settings = (struct application_settings *)*psettings;
-    dc_setting_string_destroy(env, &app_settings->message);
+    dc_setting_string_destroy(env, &app_settings->ID);
+    dc_setting_string_destroy(env, &app_settings->IP);
+    dc_setting_string_destroy(env, &app_settings->port);
     dc_free(env, app_settings->opts.opts, app_settings->opts.opts_count);
     dc_free(env, *psettings, sizeof(struct application_settings));
 
@@ -129,8 +163,9 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
     DC_TRACE(env);
 
     app_settings = (struct application_settings *)settings;
-    message = dc_setting_string_get(env, app_settings->message);
-    printf("prog2 says \"%s\"\n", message);
+
+
+
 
     return EXIT_SUCCESS;
 }
