@@ -162,7 +162,7 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
     app_settings = (struct application_settings *)settings;
 
     if(dc_error_has_no_error(err)){
-        socket_addr = dc_socket(&env, &err, PF_INET, SOCK_STREAM, );
+        socket_addr;
     }
 
 
@@ -197,3 +197,49 @@ void cpt_response_reset(struct CptResponse * response){
 
 }
 
+int cpt_login_response(void * server_info, char * name){
+    int status = 0;
+
+    return status;
+}
+int cpt_logout_response(void * server_info){
+    int status = 0;
+
+    return status;
+}
+int cpt_get_users_response(void * server_info, uint16_t channel_id){
+    int status = 0;
+
+    return status;
+}
+int cpt_join_channel_response(void * server_info, uint16_t channel_id){
+    int status = 0;
+
+    return status;
+}
+int cpt_create_channel_response(void * server_info, char * id_list){
+    int status = 0;
+
+    return status;
+}
+int cpt_leave_channel_response(void * server_info, uint16_t channel_id){
+    int status = 0;
+
+    return status;
+}
+int cpt_send_response(void * server_info, char * name){
+    int status = 0;
+
+    return status;
+}
+
+struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size){
+    struct CptRequest *req = NULL;
+
+    return req;
+}
+struct CptRequest * cpt_parse_request(uint8_t * req_buf, size_t req_size){
+    struct CptRequest *req = NULL;
+
+    return req;
+}
