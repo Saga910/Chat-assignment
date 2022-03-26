@@ -75,6 +75,4 @@ struct CptMsgResponse{
     uint8_t *msg;
 };
 
-
-
 #endif // TEMPLATE_COMMON_H
