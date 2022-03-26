@@ -17,6 +17,58 @@
 
 #include "common.h"
 
+struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size){
+    struct CptRequest *req = NULL;
 
+    return req;
+}
 
+struct CptRequest * cpt_parse_request(uint8_t * req_buf, size_t req_size){
+    struct CptRequest *req = NULL;
 
+    return req;
+}
+
+size_t cpt_serialize_request(struct CptRequest * req, uint8_t * buffer){
+    size_t status = 0;
+
+    return status;
+}
+
+size_t cpt_serialize_response(struct CptResponse * res, uint8_t * buffer){
+    size_t status = 0;
+
+    return status;
+}
+
+struct CptResponse * cpt_response_init(){
+    struct CptRequest *req = NULL;
+
+    req->version = 1;
+
+    return req;
+}
+
+void cpt_response_destroy(struct CptResponse * response){
+
+}
+
+void cpt_response_reset(struct CptResponse * response){
+
+}
+
+struct CptRequest * cpt_request_init(){
+    struct CptRequest *req = NULL;
+
+    req->version = 1;
+
+    return req;
+}
+
+void cpt_request_destroy(struct CptRequest * cpt){
+
+}
+
+void cpt_request_reset(struct CptRequest * packet){
+
+}

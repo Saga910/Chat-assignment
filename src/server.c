@@ -9,6 +9,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "cpt_server.h"
 
 
 struct application_settings
@@ -30,21 +31,6 @@ static void trace_reporter(const struct dc_posix_env *env,
                            const char *file_name,
                            const char *function_name,
                            size_t line_number);
-
-struct CptResponse * cpt_response_init();
-void cpt_response_destroy(struct CptResponse * response);
-void cpt_response_reset(struct CptResponse * response);
-
-int cpt_login_response(void * server_info, char * name);
-int cpt_logout_response(void * server_info);
-int cpt_get_users_response(void * server_info, uint16_t channel_id);
-int cpt_join_channel_response(void * server_info, uint16_t channel_id);
-int cpt_create_channel_response(void * server_info, char * id_list);
-int cpt_leave_channel_response(void * server_info, uint16_t channel_id);
-int cpt_send_response(void * server_info, char * name);
-
-struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size);
-struct CptRequest * cpt_parse_request(uint8_t * req_buf, size_t req_size);
 
 
 int main(int argc, char *argv[])
@@ -183,19 +169,6 @@ static void trace_reporter(__attribute__((unused)) const struct dc_posix_env *en
     fprintf(stdout, "TRACE: %s : %s : @ %zu\n", file_name, function_name, line_number);
 }
 
-struct CptResponse * cpt_response_init(){
-    struct CptRequest *req = NULL;
-
-    return req;
-}
-
-void cpt_response_destroy(struct CptResponse * response){
-
-}
-
-void cpt_response_reset(struct CptResponse * response){
-
-}
 
 int cpt_login_response(void * server_info, char * name){
     int status = 0;
@@ -231,15 +204,4 @@ int cpt_send_response(void * server_info, char * name){
     int status = 0;
 
     return status;
-}
-
-struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size){
-    struct CptRequest *req = NULL;
-
-    return req;
-}
-struct CptRequest * cpt_parse_request(uint8_t * req_buf, size_t req_size){
-    struct CptRequest *req = NULL;
-
-    return req;
 }

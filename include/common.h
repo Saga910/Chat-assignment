@@ -18,6 +18,7 @@
  *  along with dc_dump.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <bits/stdint-uintn.h>
+#include <string.h>
 
 #define SUCCESS 1
 #define MESSAGE 2
@@ -74,5 +75,95 @@ struct CptMsgResponse{
     uint16_t msg_len;
     uint8_t *msg;
 };
+
+/**
+* Serialize a CptRequest struct for transmission.
+*
+* @param cpt    A CptRequest struct.
+* @return       Size of the serialized packet.
+*/
+size_t cpt_serialize_request(struct CptRequest * req, uint8_t * buffer);
+
+/**
+* Serialize a CptResponse object for transmission.
+*
+* @param cpt    A CptResponse object.
+* @return       Size of the serialized packet.
+*/
+size_t cpt_serialize_response(struct CptResponse * res, uint8_t * buffer);
+
+/**
+ * Initialize CptRequest object.
+ *
+ * Dynamically allocates a cpt struct and
+ * initializes all fields.
+ *
+ * @return Pointer to cpt struct.
+*/
+struct CptRequest * cpt_request_init(void);
+
+/**
+ * Free all memory and set fields to null.
+ *
+ * @param cpt   Pointer to a cpt structure.
+*/
+void cpt_request_destroy(struct CptRequest * cpt);
+
+/**
+ * Reset packet parameters.
+ *
+ * Reset the packet parameters,
+ * and free memory for certain params.
+ *
+ * @param packet    A CptRequest struct.
+*/
+void cpt_request_reset(struct CptRequest * packet);
+
+/**
+ * Initialize CptResponse server-side packet.
+ *
+ * Initializes a CptResponse, returning a dynamically
+ * allocated pointer to a CptResponse struct.
+ *
+ * @param res_code    Received client-side packet.
+ * @return Pointer to a CptResponse object.
+ */
+struct CptResponse * cpt_response_init(void);
+
+/**
+ * Destroy CptResponse object.
+ *
+ * Destroys CptResponse object, freeing any allocated memory
+ * and setting all pointers to null.
+ *
+ * @param response  Pointer to a CptResponse object.
+ */
+void cpt_response_destroy(struct CptResponse * response);
+
+/**
+ * Reset packet parameters.
+ *
+ * Reset the response parameters, and free memory for certain params.
+ *
+ * @param response		Pointer to a CptResponse object.
+*/
+void cpt_response_reset(struct CptResponse * response);
+
+/**
+ * @brief Parse serialized server response.
+ *
+ * @param response  Address to a CptResponse object.
+ * @param buffer    Serialized response from server.
+ * @return Pointer to filled CptResponse.
+ */
+struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size);
+
+/**
+* Create a cpt struct from a cpt packet.
+*
+* @param packet    A serialized cpt protocol message.
+* @return A pointer to a cpt struct.
+*/
+struct CptRequest * cpt_parse_request(uint8_t * req_buf, size_t req_size);
 
 #endif // TEMPLATE_COMMON_H

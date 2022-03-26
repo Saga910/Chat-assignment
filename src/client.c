@@ -8,6 +8,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "cpt_client.h"
 
 #define SEND 0
 #define LOGOUT 1
@@ -38,22 +39,6 @@ static void trace_reporter(const struct dc_posix_env *env,
                            const char *file_name,
                            const char *function_name,
                            size_t line_number);
-
-size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name);
-size_t cpt_logout(void * client_info, uint8_t * serial_buf);
-size_t cpt_get_users(void * client_info, uint8_t * serial_buf, uint16_t channel_id);
-size_t cpt_create_channel(void * client_info, uint8_t * serial_buf, char * user_list);
-size_t cpt_join_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id);
-size_t cpt_leave_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id);
-int cpt_send(void * client_info, uint8_t * serial_buf, char * msg);
-
-struct CptRequest * cpt_request_init(void);
-void cpt_request_destroy(struct CptRequest * cpt);
-void cpt_request_reset(struct CptRequest * packet);
-
-size_t cpt_serialize_request(struct CptRequest * req, uint8_t * buffer);
-size_t cpt_serialize_request(struct CptRequest * req, uint8_t * buffer);
-
 
 int main(int argc, char *argv[])
 {
@@ -200,53 +185,43 @@ static void trace_reporter(__attribute__((unused)) const struct dc_posix_env *en
 }
 
 
-
-struct CptRequest * cpt_request_init(){
-    struct CptRequest *req = NULL;
-
-    req->version = 1;
-
-    return req;
-}
-
-void cpt_request_destroy(struct CptRequest * cpt){
-
-}
-
-void cpt_request_reset(struct CptRequest * packet){
-
-}
-
 size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name){
     size_t status = 0;
 
     return status;
 }
+
 size_t cpt_logout(void * client_info, uint8_t * serial_buf){
     size_t status = 0;
 
     return status;
 }
+
 size_t cpt_get_users(void * client_info, uint8_t * serial_buf, uint16_t channel_id){
     size_t status = 0;
 
     return status;
 }
+
 size_t cpt_create_channel(void * client_info, uint8_t * serial_buf, char * user_list){
     size_t status = 0;
 
     return status;
 }
+
 size_t cpt_join_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id){
     size_t status = 0;
 
     return status;
 }
+
 size_t cpt_leave_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id){
 
 }
+
 int cpt_send(void * client_info, uint8_t * serial_buf, char * msg){
     int status = 0;
 
     return status;
 }
+
