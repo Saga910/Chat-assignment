@@ -8,6 +8,9 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <unistd.h>
 #include "cpt_client.h"
 
 #define SEND 0
@@ -19,11 +22,13 @@
 #define LEAVE_CHAN 7
 #define CREATE_PRIVATE_CHAN 8
 
+#define BUFFER 1024
+
 struct application_settings
 {
     struct dc_opt_settings opts;
     struct dc_setting_string *IP;
-    struct dc_setting_uint16 *port;
+    struct dc_setting_string *port;
     struct dc_setting_string *ID;
 };
 
@@ -76,7 +81,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
 
     settings->opts.parent.config_path = dc_setting_path_create(env, err);
     settings->IP = dc_setting_string_create(env, err);
-    settings->port = dc_setting_uint16_create(env, err);
+    settings->port = dc_setting_string_create(env, err);
     settings->ID = dc_setting_string_create(env, err);
 
 
@@ -102,7 +107,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_config,
                     "127.0.0.1"},
             {(struct dc_setting *)settings->port,
-                    dc_options_set_uint16,
+                    dc_options_set_string,
                     "port",
                     required_argument,
                     'p',
@@ -110,11 +115,11 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_string,
                     "port",
                     dc_string_from_config,
-                    (const void *) 8080},
+                    "8080"},
             {(struct dc_setting *)settings->ID,
                     dc_options_set_string,
                     "id",
-                    required_argument,
+                    optional_argument,
                     'd',
                     "ID",
                     dc_string_from_string,
@@ -159,14 +164,73 @@ static int destroy_settings(const struct dc_posix_env *env,
 static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_application_settings *settings)
 {
     struct application_settings *app_settings;
-    char   buffer[BUFSIZ];
+    int sd = -1, rc, bytes;
+    char   buffer[BUFFER];
+    char sesrver[BUFFER];
+    struct sockaddr_in6 serveradrr;
+    struct addrinfo hints, *res;
+    char *server;
+    char *port;
 
     DC_TRACE(env);
 
     app_settings = (struct application_settings *)settings;
 
+    server = (char *) app_settings->IP;
+    port = (char *) app_settings->port;
 
+    do {
+        sd = socket(AF_INET6, SOCK_STREAM, 0);
+        if(sd < 0){
+            perror("socket failed");
+            break;
+        }
 
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET6;
+        hints.ai_flags = AI_V4MAPPED;
+        hints.ai_socktype = SOCK_STREAM;
+        rc = getaddrinfo(server, port, &hints, &res);
+        if (rc != 0){
+            printf("Host not found %s\n", server);
+            perror("getaddreinfo() fialed\n");
+            break;
+        }
+        memcpy(&serveradrr, res->ai_addr, sizeof(serveradrr));
+
+        freeaddrinfo(res);
+
+        rc = connect(sd, (struct sockaddr *)&serveradrr, sizeof(serveradrr));
+        if(rc < 0){
+            perror("connect() failed");
+            break;
+        }
+
+        memset(buffer, 'c', sizeof(buffer));
+        rc = send(sd, buffer, sizeof(buffer), 0);
+        if (rc < 0){
+            perror("send failed");
+            break;
+        }
+
+        bytes = 0;
+        while (bytes < BUFFER){
+            rc = recv(sd, &buffer[bytes], BUFFER - bytes, 0);
+            if(rc <0 ){
+                perror("recv failed");
+                break;
+            } else if (rc == 0){
+                printf("The serve closed the connection");
+                break;
+            }
+
+            bytes += rc;
+        }
+    } while (0);
+
+    if (sd != -1){
+        close(sd);
+    }
 
     return EXIT_SUCCESS;
 }

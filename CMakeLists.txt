@@ -9,13 +9,13 @@ project(Chat-assignmnet
         LANGUAGES C)
 
 set(HEADER_LIST
-        "${template2_SOURCE_DIR}/include/common.h"
-        "${template2_SOURCE_DIR}/include/cpt_client.h"
-        "${template2_SOURCE_DIR}/include/cpt_server.h"
+        "${Chat-assignmnet_SOURCE_DIR}/include/common.h"
+        "${Chat-assignmnet_SOURCE_DIR}/include/cpt_client.h"
+        "${Chat-assignmnet_SOURCE_DIR}/include/cpt_server.h"
         )
 
 set(COMMON_SOURCE_LIST
-        "${template2_SOURCE_DIR}/src/common.c"
+        "${Chat-assignmnet_SOURCE_DIR}/src/common.c"
         )
 
 set(PROG1_SOURCE_LIST
@@ -25,11 +25,11 @@ set(PROG2_SOURCE_LIST
         )
 
 set(PROG1_MAIN_SOURCE
-        "${template2_SOURCE_DIR}/src/server.c"
+        "${Chat-assignmnet_SOURCE_DIR}/src/server.c"
         )
 
 set(PROG2_MAIN_SOURCE
-        "${template2_SOURCE_DIR}/src/client.c"
+        "${Chat-assignmnet_SOURCE_DIR}/src/client.c"
         )
 
 ### Require out-of-source builds

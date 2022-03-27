@@ -20,7 +20,7 @@ struct application_settings
 {
     struct dc_opt_settings opts;
     struct dc_setting_string *IP;
-    struct dc_setting_uint16 *port;
+    struct dc_setting_string *port;
 };
 
 
@@ -73,7 +73,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
 
     settings->opts.parent.config_path = dc_setting_path_create(env, err);
     settings->IP = dc_setting_string_create(env, err);
-    settings->port = dc_setting_uint16_create(env, err);
+    settings->port = dc_setting_string_create(env, err);
 
     struct options opts[] = {
             {(struct dc_setting *)settings->opts.parent.config_path,
@@ -97,7 +97,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_config,
                     "127.0.0.1"},
             {(struct dc_setting *)settings->port,
-                    dc_options_set_uint16,
+                    dc_options_set_string,
                     "port",
                     required_argument,
                     'p',
@@ -105,7 +105,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_string,
                     "port",
                     dc_string_from_config,
-                    (const void *) 8080},
+                    "8080"},
     };
 
     // note the trick here - we use calloc and add 1 to ensure the last line is all 0/NULL
@@ -128,7 +128,7 @@ static int destroy_settings(const struct dc_posix_env *env,
     DC_TRACE(env);
     app_settings = (struct application_settings *)*psettings;
     dc_setting_string_destroy(env, &app_settings->IP);
-    dc_setting_uint16_destroy(env, &app_settings->port);
+    dc_setting_string_destroy(env, &app_settings->port);
     dc_free(env, app_settings->opts.opts, app_settings->opts.opts_count);
     dc_free(env, *psettings, sizeof(struct application_settings));
 
@@ -142,12 +142,15 @@ static int destroy_settings(const struct dc_posix_env *env,
 
 static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_application_settings *settings)
 {
+    int TRUE = 1, FALSE = 0;
     struct application_settings *app_settings;
     int socket_addr = -1, reusable, on = 1, rc, timeout, current_size=0, nfds = 1;
     struct sockaddr_in6 sockaddrIn;
     struct addrinfo *addrinfo;
     uint16_t *port;
     struct pollfd pollfd[200];
+    int end_server = 0, compress = 0, new_sd = -1, close_conn, len;
+    char buffer[1024];
 
     DC_TRACE(env);
 
@@ -217,10 +220,96 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
         current_size = nfds;
 
         for(int i = 0; i < current_size; i++){
+            if (pollfd[i].revents == 0){
+                continue;
+            }
 
+            if  (pollfd[i].revents != POLLIN){
+                printf("ERROR! revents = %d\n", pollfd[i].revents);
+                end_server = TRUE;
+                break;
+            }
+
+            if (pollfd[i].revents == socket_addr){
+                printf("Listening socket is readable\n");
+
+                do {
+                    new_sd = accept(socket_addr, NULL, NULL);
+                    if(new_sd <0){
+                        if(errno != EWOULDBLOCK){
+                            perror("Accept failed");
+                            end_server = TRUE;
+                        }
+                        break;
+                    }
+
+                    printf("New incoming connection = %d\n", new_sd);
+                    pollfd[nfds].fd = new_sd;
+                    pollfd[nfds].events = POLLIN;
+                    nfds++;
+
+                } while (new_sd != -1);
+            } else{
+                printf("Descriptor %d is readable\n", pollfd[i].fd);
+                close_conn = FALSE;
+
+                do {
+                    rc = recv(pollfd[i].fd, buffer, sizeof(buffer), 0);
+
+                    if(rc < 0){
+                        if(errno != EWOULDBLOCK){
+                            perror("recv() failed");
+                            close_conn = TRUE;
+                        }
+                        break;
+                    }
+
+                    if(rc == 0){
+                        printf("Connection close\n");
+                        close_conn = TRUE;
+                        break;
+                    }
+
+                    len = rc;
+                    printf("%d bytes received\n", len);
+                    printf("Message: %s\n", buffer);
+
+                    rc = send(pollfd[i].fd, buffer, len, 0);
+                    if(rc < 0){
+                        perror("Send failed");
+                        close_conn = TRUE;
+                        break;
+                    }
+                } while (TRUE);
+
+                if (close_conn){
+                    close(pollfd[i].fd);
+                    pollfd[i].fd = -1;
+                    compress = TRUE;
+                }
+            }
         }
 
+        if (compress){
+            compress = FALSE;
+            for (int i = 0; i < nfds; ++i) {
+                if(pollfd[i].fd == -1){
+                    for(int j =0; j< nfds-1; j++){
+                        pollfd[j].fd = pollfd[j+1].fd;
+                    }
+                    i--;
+                    nfds--;
+                }
+            }
+        }
+    } while (end_server == FALSE);
+
+    for (int i = 0; i < nfds; ++i) {
+        if (pollfd[i].fd >= 0){
+            close(pollfd[i].fd);
+        }
     }
+
     return EXIT_SUCCESS;
 }
 
