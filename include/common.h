@@ -67,6 +67,7 @@ struct CptRequest{
 struct CptResponse{
     uint8_t code;
     uint8_t *data;
+    uint16_t data_size;
 };
 
 struct CptMsgResponse{
