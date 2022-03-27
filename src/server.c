@@ -9,6 +9,10 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <sys/poll.h>
 #include "cpt_server.h"
 
 
@@ -16,7 +20,7 @@ struct application_settings
 {
     struct dc_opt_settings opts;
     struct dc_setting_string *IP;
-    struct dc_setting_string *port;
+    struct dc_setting_uint16 *port;
 };
 
 
@@ -69,7 +73,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
 
     settings->opts.parent.config_path = dc_setting_path_create(env, err);
     settings->IP = dc_setting_string_create(env, err);
-    settings->port = dc_setting_string_create(env, err);
+    settings->port = dc_setting_uint16_create(env, err);
 
     struct options opts[] = {
             {(struct dc_setting *)settings->opts.parent.config_path,
@@ -93,7 +97,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_config,
                     "127.0.0.1"},
             {(struct dc_setting *)settings->port,
-                    dc_options_set_string,
+                    dc_options_set_uint16,
                     "port",
                     required_argument,
                     'p',
@@ -101,7 +105,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_string,
                     "port",
                     dc_string_from_config,
-                    "8080"},
+                    (const void *) 8080},
     };
 
     // note the trick here - we use calloc and add 1 to ensure the last line is all 0/NULL
@@ -124,7 +128,7 @@ static int destroy_settings(const struct dc_posix_env *env,
     DC_TRACE(env);
     app_settings = (struct application_settings *)*psettings;
     dc_setting_string_destroy(env, &app_settings->IP);
-    dc_setting_string_destroy(env, &app_settings->port);
+    dc_setting_uint16_destroy(env, &app_settings->port);
     dc_free(env, app_settings->opts.opts, app_settings->opts.opts_count);
     dc_free(env, *psettings, sizeof(struct application_settings));
 
@@ -139,19 +143,84 @@ static int destroy_settings(const struct dc_posix_env *env,
 static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_application_settings *settings)
 {
     struct application_settings *app_settings;
-    int socket_addr;
-    struct sockaddr *sockaddr;
+    int socket_addr = -1, reusable, on = 1, rc, timeout, current_size=0, nfds = 1;
+    struct sockaddr_in6 sockaddrIn;
     struct addrinfo *addrinfo;
+    uint16_t *port;
+    struct pollfd pollfd[200];
 
     DC_TRACE(env);
 
     app_settings = (struct application_settings *)settings;
+    port = (uint16_t *) app_settings->port;
 
-    if(dc_error_has_no_error(err)){
-        socket_addr;
+    socket_addr = socket(AF_INET6, SOCK_STREAM, 0);
+
+    if(socket_addr < 0){
+        printf("Failed to create a socket.\n");
+        exit(-1);
     }
 
+    reusable = setsockopt(socket_addr, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
 
+    if(reusable < 0){
+        printf("failed to set socket opt.\n");
+        exit(-1);
+    }
+
+    rc = ioctl(socket_addr, FIONBIO, (char *)&on);
+
+    if(rc < 0){
+        perror("ioctl() failed");
+        close(socket_addr);
+        exit(-1);
+    }
+
+    memset(&sockaddrIn, 0, sizeof(sockaddrIn));
+    sockaddrIn.sin6_family = AF_INET6;
+    memcpy(&sockaddrIn.sin6_addr, &in6addr_any, sizeof(in6addr_any));
+    sockaddrIn.sin6_port = htons(*port);
+    rc = bind(socket_addr, (struct sockaddr *)&socket_addr, sizeof(socket_addr));
+    if(rc < 0){
+        perror("bind() failed");
+        close(socket_addr);
+        exit(-1);
+    }
+
+    rc = listen(socket_addr, 32);
+    if(rc < 0){
+        perror("listen() failed");
+        close(socket_addr);
+        exit(-1);
+    }
+
+    memset(pollfd, 0, sizeof(pollfd));
+    pollfd[0].fd = socket_addr;
+    pollfd[0].events = POLLIN;
+
+    timeout = (3 * 60 * 1000);
+
+    do {
+        printf("Waiting on poll()....\n");
+
+        rc = poll(pollfd, (nfds_t) nfds, timeout);
+        if(rc < 0){
+            perror("  poll() failed");
+            break;
+        }
+
+        if(rc == 0){
+            printf(" Poll timeout. \n");
+            break;
+        }
+
+        current_size = nfds;
+
+        for(int i = 0; i < current_size; i++){
+
+        }
+
+    }
     return EXIT_SUCCESS;
 }
 

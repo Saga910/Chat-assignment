@@ -7,6 +7,11 @@
 
 #include "common.h"
 
+struct username_id_pair{
+    uint16_t user_id;
+    char *username;
+};
+
 /**
  * Handle a received 'LOGIN' protocol message.
  *

@@ -23,7 +23,7 @@ struct application_settings
 {
     struct dc_opt_settings opts;
     struct dc_setting_string *IP;
-    struct dc_setting_string *port;
+    struct dc_setting_uint16 *port;
     struct dc_setting_string *ID;
 };
 
@@ -76,8 +76,9 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
 
     settings->opts.parent.config_path = dc_setting_path_create(env, err);
     settings->IP = dc_setting_string_create(env, err);
-    settings->port = dc_setting_string_create(env, err);
+    settings->port = dc_setting_uint16_create(env, err);
     settings->ID = dc_setting_string_create(env, err);
+
 
     struct options opts[] = {
             {(struct dc_setting *)settings->opts.parent.config_path,
@@ -101,7 +102,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_config,
                     "127.0.0.1"},
             {(struct dc_setting *)settings->port,
-                    dc_options_set_string,
+                    dc_options_set_uint16,
                     "port",
                     required_argument,
                     'p',
@@ -109,7 +110,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_string,
                     "port",
                     dc_string_from_config,
-                    "8080"},
+                    (const void *) 8080},
             {(struct dc_setting *)settings->ID,
                     dc_options_set_string,
                     "id",
@@ -158,7 +159,7 @@ static int destroy_settings(const struct dc_posix_env *env,
 static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_application_settings *settings)
 {
     struct application_settings *app_settings;
-    const char *message;
+    char   buffer[BUFSIZ];
 
     DC_TRACE(env);
 

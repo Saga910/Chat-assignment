@@ -6,7 +6,7 @@ endif ()
 
 set(TEST_HEADER_LIST
         tests.h
-        ../include/cpt_client.h ../include/cpt_server.h)
+        )
 
 set(TEST_SOURCE_LIST
         main.c

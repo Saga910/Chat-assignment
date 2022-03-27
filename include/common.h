@@ -20,6 +20,7 @@
 #include <bits/stdint-uintn.h>
 #include <string.h>
 
+#define VERSION 1.1
 #define SUCCESS 1
 #define MESSAGE 2
 #define USER_CONNECTED 3
@@ -58,7 +59,6 @@ enum commands{
 struct CptRequest{
     uint8_t version;
     uint8_t command;
-    uint16_t channel_type;
     uint16_t channel_id;
     uint16_t msg_len;
     char *msg;

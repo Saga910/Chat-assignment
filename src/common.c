@@ -15,10 +15,15 @@
  *  along with dc_dump.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdlib.h>
 #include "common.h"
 
 struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size){
-    struct CptRequest *req = NULL;
+    struct CptRequest *req;
+
+    req->version = (uint8_t) VERSION;
+    req->command = LOGIN;
+
 
     return req;
 }
@@ -60,13 +65,24 @@ void cpt_response_reset(struct CptResponse * response){
 struct CptRequest * cpt_request_init(){
     struct CptRequest *req = NULL;
 
+
+
     req->version = 1;
+    req->command = LOGIN;
+    req->channel_id = 0;
+    req->msg = "Hello";
+
 
     return req;
 }
 
 void cpt_request_destroy(struct CptRequest * cpt){
-
+    cpt->version = 0;
+    cpt->command = 0;
+    cpt->channel_id = 0;
+    cpt->msg_len = 0;
+    cpt->msg = NULL;
+    free(cpt->msg);
 }
 
 void cpt_request_reset(struct CptRequest * packet){

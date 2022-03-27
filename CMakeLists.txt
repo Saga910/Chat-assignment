@@ -10,6 +10,8 @@ project(Chat-assignmnet
 
 set(HEADER_LIST
         "${template2_SOURCE_DIR}/include/common.h"
+        "${template2_SOURCE_DIR}/include/cpt_client.h"
+        "${template2_SOURCE_DIR}/include/cpt_server.h"
         )
 
 set(COMMON_SOURCE_LIST
