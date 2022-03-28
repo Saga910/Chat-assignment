@@ -253,6 +253,14 @@ static void trace_reporter(__attribute__((unused)) const struct dc_posix_env *en
 size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name){
     size_t status = 0;
 
+    //possible sol?
+    //send(name)
+    //receive(serial_buf)
+    //parse(serial_buf) for response
+    //if (serial_buf_response == success_code)
+    //serialized_buf = serialize(serial_buf)
+    //return sizeof (serialized_buf)
+
     return status;
 }
 

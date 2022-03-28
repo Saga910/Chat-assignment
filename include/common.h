@@ -67,6 +67,7 @@ struct CptRequest{
 struct CptResponse{
     uint8_t code;
     uint8_t *data;
+    uint16_t data_size;
 };
 
 struct CptMsgResponse{
@@ -165,5 +166,23 @@ struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size);
 * @return A pointer to a cpt struct.
 */
 struct CptRequest * cpt_parse_request(uint8_t * req_buf, size_t req_size);
+
+/**
+ * Helper function that converts uint8_t to string.
+ *
+ * Takes a uint8_t value and performs conversion to string.
+ *
+ * @param num
+ */
+const char * uint8_to_str(uint8_t num);
+
+/**
+ * Helper function that converts uint16_t to string.
+ *
+ * Takes a uint16_t value and performs conversion to string.
+ *
+ * @param num
+ */
+const char *  uint16_to_str(uint16_t num);
 
 #endif // TEMPLATE_COMMON_H

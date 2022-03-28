@@ -354,6 +354,8 @@ struct channelList* createChannelList(){
 int cpt_login_response(void * server_info, char * name){
     int status = 0;
 
+    
+
     return status;
 }
 int cpt_logout_response(void * server_info){

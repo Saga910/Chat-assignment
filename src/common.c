@@ -16,75 +16,158 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include "common.h"
 
 struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size){
-    struct CptRequest *req;
-
-    req->version = (uint8_t) VERSION;
-    req->command = LOGIN;
-
-
-    return req;
+//    struct CptResponse *res;
+//    res = malloc(sizeof (struct CptResponse *));
+//
+//    //de serialize??
+//
+//    return res;
 }
 
 struct CptRequest * cpt_parse_request(uint8_t * req_buf, size_t req_size){
-    struct CptRequest *req = NULL;
-
-    return req;
+//    struct CptRequest *req;
+//    req = malloc(req_size);
+//
+//    //req =
+//
+//    return req;
 }
 
-size_t cpt_serialize_request(struct CptRequest * req, uint8_t * buffer){
-    size_t status = 0;
-
-    return status;
+size_t cpt_serialize_request(struct CptRequest * req, uint8_t * buffer)
+{
+//
+//    buffer = malloc(sizeof (struct CptRequest *));
+//
+//    sprintf(buffer, "%hhu, %hhu, %hu, %hu, %s", req->version, req->command, req->channel_id, req->msg_len, req->msg);
+//    size_t req_size;
+//    req_size = sizeof (buffer);
+//    return sizeof (req_size);
 }
-
-size_t cpt_serialize_response(struct CptResponse * res, uint8_t * buffer){
-    size_t status = 0;
-
-    return status;
+size_t cpt_serialize_response(struct CptResponse * res, uint8_t * buffer)
+{
+//    buffer = malloc(sizeof (struct CptRequest *));
+//
+//    //concat clean uint8 values
+//    sprintf(buffer, "%hu, %s, %hu", res->code, res->data, res->data_size);
+//    size_t req_size;
+//    req_size = sizeof (buffer);
+//    return sizeof (req_size);
 }
 
 struct CptResponse * cpt_response_init(){
-    struct CptRequest *req = NULL;
+    struct CptResponse *res;
 
-    req->version = 1;
+    res = malloc(sizeof (struct CptResponse *));
 
-    return req;
+    res->code = 0;
+    res->data = NULL;
+    res->data_size = 0;
+
+    return res;
 }
 
-void cpt_response_destroy(struct CptResponse * response){
+void cpt_response_destroy(struct CptResponse * response)
+{
+    if (response != NULL)
+    {
+        response = NULL;
 
+        free(response);
+    }
 }
 
-void cpt_response_reset(struct CptResponse * response){
-
+void cpt_response_reset(struct CptResponse * response)
+{
+    if (response->code != 0)
+    {
+        response->code = 0;
+    }
+    else if (response->data != NULL)
+    {
+        response->data = NULL;
+        free(response->data);
+    }
+    else if (response->data_size != 0)
+    {
+        response->data_size = 0;
+    }
 }
 
-struct CptRequest * cpt_request_init(){
-    struct CptRequest *req = NULL;
+struct CptRequest * cpt_request_init()
+{
+    struct CptRequest *req;
 
+    req = malloc(sizeof (struct CptRequest *));
 
-
-    req->version = 1;
-    req->command = LOGIN;
+    req->version = 0;
+    req->command = 0;
     req->channel_id = 0;
-    req->msg = "Hello";
-
+    req->msg_len = 0;
+    req->msg = NULL;
 
     return req;
 }
 
-void cpt_request_destroy(struct CptRequest * cpt){
-    cpt->version = 0;
-    cpt->command = 0;
-    cpt->channel_id = 0;
-    cpt->msg_len = 0;
-    cpt->msg = NULL;
-    free(cpt->msg);
+void cpt_request_destroy(struct CptRequest * cpt)
+{
+    if (cpt != NULL)
+    {
+        cpt->version = 0;
+        cpt->command = 0;
+        cpt->channel_id = 0;
+        cpt->msg_len = 0;
+        cpt->msg = NULL;
+
+        free(cpt);
+    }
 }
 
-void cpt_request_reset(struct CptRequest * packet){
-
+void cpt_request_reset(struct CptRequest * packet)
+{
+    if (packet->version != 0)
+    {
+        packet->version = 0;
+    }
+    else if (packet->msg != NULL)
+    {
+        packet->msg = NULL;
+        free(packet->msg);
+    }
+    else if (packet->channel_id != 0)
+    {
+        packet->channel_id = 0;
+    }
+    else if (packet->command != 0)
+    {
+        packet->command = 0;
+    }
+    else if (packet->msg_len != 0)
+    {
+        packet->msg_len = 0;
+    }
 }
+//
+//const char * uint_to_str(uint16_t num)
+//{
+//    char * bit_str;
+//    size_t cp = sizeof (char *);
+//    size_t ut = sizeof (uint16_t);
+//    bit_str = malloc(cp * ut);
+//
+//    sprintf(bit_str, "0x%x\n", num);
+//
+//    return (bit_str);
+//}
+//
+//const char * str_to_uint16(char * str)
+//{
+//    uint16_t
+//}
+//const char * str_to_uint8(char * str)
+//{
+//
+//}
