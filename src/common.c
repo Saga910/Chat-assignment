@@ -16,34 +16,46 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include "common.h"
 
 struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size){
-    struct CptResponse *res;
-    res = malloc(sizeof (struct CptResponse *));
-
-    //serialize??
-
-    return res;
+//    struct CptResponse *res;
+//    res = malloc(sizeof (struct CptResponse *));
+//
+//    //de serialize??
+//
+//    return res;
 }
 
 struct CptRequest * cpt_parse_request(uint8_t * req_buf, size_t req_size){
-    struct CptRequest *req;
-    req = malloc(sizeof (struct CptRequest *));
-
-    //serialize??
-
-    return req;
+//    struct CptRequest *req;
+//    req = malloc(req_size);
+//
+//    //req =
+//
+//    return req;
 }
 
-size_t cpt_serialize_request(struct CptRequest * req, uint8_t * buffer){
-    size_t status = 0;
-    return status;
+size_t cpt_serialize_request(struct CptRequest * req, uint8_t * buffer)
+{
+//
+//    buffer = malloc(sizeof (struct CptRequest *));
+//
+//    sprintf(buffer, "%hhu, %hhu, %hu, %hu, %s", req->version, req->command, req->channel_id, req->msg_len, req->msg);
+//    size_t req_size;
+//    req_size = sizeof (buffer);
+//    return sizeof (req_size);
 }
-
-size_t cpt_serialize_response(struct CptResponse * res, uint8_t * buffer){
-    size_t status = 0;
-    return status;
+size_t cpt_serialize_response(struct CptResponse * res, uint8_t * buffer)
+{
+//    buffer = malloc(sizeof (struct CptRequest *));
+//
+//    //concat clean uint8 values
+//    sprintf(buffer, "%hu, %s, %hu", res->code, res->data, res->data_size);
+//    size_t req_size;
+//    req_size = sizeof (buffer);
+//    return sizeof (req_size);
 }
 
 struct CptResponse * cpt_response_init(){
@@ -63,6 +75,7 @@ void cpt_response_destroy(struct CptResponse * response)
     if (response != NULL)
     {
         response = NULL;
+
         free(response);
     }
 }
@@ -108,13 +121,13 @@ void cpt_request_destroy(struct CptRequest * cpt)
         cpt->channel_id = 0;
         cpt->msg_len = 0;
         cpt->msg = NULL;
+
         free(cpt);
     }
 }
 
 void cpt_request_reset(struct CptRequest * packet)
 {
-    struct CptRequest *res = packet;
     if (packet->version != 0)
     {
         packet->version = 0;
@@ -128,8 +141,33 @@ void cpt_request_reset(struct CptRequest * packet)
     {
         packet->channel_id = 0;
     }
+    else if (packet->command != 0)
+    {
+        packet->command = 0;
+    }
     else if (packet->msg_len != 0)
     {
         packet->msg_len = 0;
     }
 }
+//
+//const char * uint_to_str(uint16_t num)
+//{
+//    char * bit_str;
+//    size_t cp = sizeof (char *);
+//    size_t ut = sizeof (uint16_t);
+//    bit_str = malloc(cp * ut);
+//
+//    sprintf(bit_str, "0x%x\n", num);
+//
+//    return (bit_str);
+//}
+//
+//const char * str_to_uint16(char * str)
+//{
+//    uint16_t
+//}
+//const char * str_to_uint8(char * str)
+//{
+//
+//}

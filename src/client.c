@@ -260,7 +260,6 @@ size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name){
     //if (serial_buf_response == success_code)
     //serialized_buf = serialize(serial_buf)
     //return sizeof (serialized_buf)
-    //
 
     return status;
 }

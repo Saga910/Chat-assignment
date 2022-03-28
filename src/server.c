@@ -331,6 +331,8 @@ static void trace_reporter(__attribute__((unused)) const struct dc_posix_env *en
 int cpt_login_response(void * server_info, char * name){
     int status = 0;
 
+    
+
     return status;
 }
 int cpt_logout_response(void * server_info){
