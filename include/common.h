@@ -17,8 +17,8 @@
  *  You should have received a copy of the GNU General Public License
  *  along with dc_dump.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <bits/stdint-uintn.h>
 #include <string.h>
+#include <stdint-gcc.h>
 
 #define VERSION 1.1
 #define SUCCESS 1

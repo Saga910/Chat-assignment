@@ -226,7 +226,7 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
 
             bytes += rc;
         }
-    } while (0);
+    } while (1);
 
     if (sd != -1){
         close(sd);

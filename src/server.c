@@ -147,7 +147,7 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
     int socket_addr = -1, reusable, on = 1, rc, timeout, current_size=0, nfds = 1;
     struct sockaddr_in6 sockaddrIn;
     struct addrinfo *addrinfo;
-    uint16_t *port;
+    char *port;
     struct pollfd pollfd[200];
     int end_server = 0, compress = 0, new_sd = -1, close_conn, len;
     char buffer[1024];
@@ -155,160 +155,161 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
     DC_TRACE(env);
 
     app_settings = (struct application_settings *)settings;
-    port = (uint16_t *) app_settings->port;
+    port = (char *) app_settings->port;
 
-    socket_addr = socket(AF_INET6, SOCK_STREAM, 0);
-
-    if(socket_addr < 0){
-        printf("Failed to create a socket.\n");
-        exit(-1);
-    }
-
-    reusable = setsockopt(socket_addr, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
-
-    if(reusable < 0){
-        printf("failed to set socket opt.\n");
-        exit(-1);
-    }
-
-    rc = ioctl(socket_addr, FIONBIO, (char *)&on);
-
-    if(rc < 0){
-        perror("ioctl() failed");
-        close(socket_addr);
-        exit(-1);
-    }
-
-    memset(&sockaddrIn, 0, sizeof(sockaddrIn));
-    sockaddrIn.sin6_family = AF_INET6;
-    memcpy(&sockaddrIn.sin6_addr, &in6addr_any, sizeof(in6addr_any));
-    sockaddrIn.sin6_port = htons(*port);
-    rc = bind(socket_addr, (struct sockaddr *)&socket_addr, sizeof(socket_addr));
-    if(rc < 0){
-        perror("bind() failed");
-        close(socket_addr);
-        exit(-1);
-    }
-
-    rc = listen(socket_addr, 32);
-    if(rc < 0){
-        perror("listen() failed");
-        close(socket_addr);
-        exit(-1);
-    }
-
-    memset(pollfd, 0, sizeof(pollfd));
-    pollfd[0].fd = socket_addr;
-    pollfd[0].events = POLLIN;
-
-    timeout = (3 * 60 * 1000);
-
-    do {
-        printf("Waiting on poll()....\n");
-
-        rc = poll(pollfd, (nfds_t) nfds, timeout);
-        if(rc < 0){
-            perror("  poll() failed");
-            break;
-        }
-
-        if(rc == 0){
-            printf(" Poll timeout. \n");
-            break;
-        }
-
-        current_size = nfds;
-
-        for(int i = 0; i < current_size; i++){
-            if (pollfd[i].revents == 0){
-                continue;
-            }
-
-            if  (pollfd[i].revents != POLLIN){
-                printf("ERROR! revents = %d\n", pollfd[i].revents);
-                end_server = TRUE;
-                break;
-            }
-
-            if (pollfd[i].revents == socket_addr){
-                printf("Listening socket is readable\n");
-
-                do {
-                    new_sd = accept(socket_addr, NULL, NULL);
-                    if(new_sd <0){
-                        if(errno != EWOULDBLOCK){
-                            perror("Accept failed");
-                            end_server = TRUE;
-                        }
-                        break;
-                    }
-
-                    printf("New incoming connection = %d\n", new_sd);
-                    pollfd[nfds].fd = new_sd;
-                    pollfd[nfds].events = POLLIN;
-                    nfds++;
-
-                } while (new_sd != -1);
-            } else{
-                printf("Descriptor %d is readable\n", pollfd[i].fd);
-                close_conn = FALSE;
-
-                do {
-                    rc = recv(pollfd[i].fd, buffer, sizeof(buffer), 0);
-
-                    if(rc < 0){
-                        if(errno != EWOULDBLOCK){
-                            perror("recv() failed");
-                            close_conn = TRUE;
-                        }
-                        break;
-                    }
-
-                    if(rc == 0){
-                        printf("Connection close\n");
-                        close_conn = TRUE;
-                        break;
-                    }
-
-                    len = rc;
-                    printf("%d bytes received\n", len);
-                    printf("Message: %s\n", buffer);
-
-                    rc = send(pollfd[i].fd, buffer, len, 0);
-                    if(rc < 0){
-                        perror("Send failed");
-                        close_conn = TRUE;
-                        break;
-                    }
-                } while (TRUE);
-
-                if (close_conn){
-                    close(pollfd[i].fd);
-                    pollfd[i].fd = -1;
-                    compress = TRUE;
-                }
-            }
-        }
-
-        if (compress){
-            compress = FALSE;
-            for (int i = 0; i < nfds; ++i) {
-                if(pollfd[i].fd == -1){
-                    for(int j =0; j< nfds-1; j++){
-                        pollfd[j].fd = pollfd[j+1].fd;
-                    }
-                    i--;
-                    nfds--;
-                }
-            }
-        }
-    } while (end_server == FALSE);
-
-    for (int i = 0; i < nfds; ++i) {
-        if (pollfd[i].fd >= 0){
-            close(pollfd[i].fd);
-        }
-    }
+//    socket_addr = socket(AF_INET6, SOCK_STREAM, 0);
+//
+//    if(socket_addr < 0){
+//        printf("Failed to create a socket.\n");
+//        exit(-1);
+//    }
+//
+//    reusable = setsockopt(socket_addr, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
+//
+//    if(reusable < 0){
+//        printf("failed to set socket opt.\n");
+//        exit(-1);
+//    }
+//
+//    rc = ioctl(socket_addr, FIONBIO, (char *)&on);
+//
+//    if(rc < 0){
+//        perror("ioctl() failed");
+//        close(socket_addr);
+//        exit(-1);
+//    }
+//
+//    memset(&sockaddrIn, 0, sizeof(sockaddrIn));
+//    sockaddrIn.sin6_family = AF_INET6;
+//    memcpy(&sockaddrIn.sin6_addr, &in6addr_any, sizeof(in6addr_any));
+//    sockaddrIn.sin6_port = htons(*port);
+//    rc = bind(socket_addr, (struct sockaddr *)&socket_addr, sizeof(socket_addr));
+//
+//    if(rc < 0){
+//        perror("bind() failed");
+//        close(socket_addr);
+//        exit(-1);
+//    }
+//
+//    rc = listen(socket_addr, 32);
+//    if(rc < 0){
+//        perror("listen() failed");
+//        close(socket_addr);
+//        exit(-1);
+//    }
+//
+//    memset(pollfd, 0, sizeof(pollfd));
+//    pollfd[0].fd = socket_addr;
+//    pollfd[0].events = POLLIN;
+//
+//    timeout = (3 * 60 * 1000);
+//
+//    do {
+//        printf("Waiting on poll()....\n");
+//
+//        rc = poll(pollfd, (nfds_t) nfds, timeout);
+//        if(rc < 0){
+//            perror("  poll() failed");
+//            break;
+//        }
+//
+//        if(rc == 0){
+//            printf(" Poll timeout. \n");
+//            break;
+//        }
+//
+//        current_size = nfds;
+//
+//        for(int i = 0; i < current_size; i++){
+//            if (pollfd[i].revents == 0){
+//                continue;
+//            }
+//
+//            if  (pollfd[i].revents != POLLIN){
+//                printf("ERROR! revents = %d\n", pollfd[i].revents);
+//                end_server = TRUE;
+//                break;
+//            }
+//
+//            if (pollfd[i].revents == socket_addr){
+//                printf("Listening socket is readable\n");
+//
+//                do {
+//                    new_sd = accept(socket_addr, NULL, NULL);
+//                    if(new_sd <0){
+//                        if(errno != EWOULDBLOCK){
+//                            perror("Accept failed");
+//                            end_server = TRUE;
+//                        }
+//                        break;
+//                    }
+//
+//                    printf("New incoming connection = %d\n", new_sd);
+//                    pollfd[nfds].fd = new_sd;
+//                    pollfd[nfds].events = POLLIN;
+//                    nfds++;
+//
+//                } while (new_sd != -1);
+//            } else{
+//                printf("Descriptor %d is readable\n", pollfd[i].fd);
+//                close_conn = FALSE;
+//
+//                do {
+//                    rc = recv(pollfd[i].fd, buffer, sizeof(buffer), 0);
+//
+//                    if(rc < 0){
+//                        if(errno != EWOULDBLOCK){
+//                            perror("recv() failed");
+//                            close_conn = TRUE;
+//                        }
+//                        break;
+//                    }
+//
+//                    if(rc == 0){
+//                        printf("Connection close\n");
+//                        close_conn = TRUE;
+//                        break;
+//                    }
+//
+//                    len = rc;
+//                    printf("%d bytes received\n", len);
+//                    printf("Message: %s\n", buffer);
+//
+//                    rc = send(pollfd[i].fd, buffer, len, 0);
+//                    if(rc < 0){
+//                        perror("Send failed");
+//                        close_conn = TRUE;
+//                        break;
+//                    }
+//                } while (TRUE);
+//
+//                if (close_conn){
+//                    close(pollfd[i].fd);
+//                    pollfd[i].fd = -1;
+//                    compress = TRUE;
+//                }
+//            }
+//        }
+//
+//        if (compress){
+//            compress = FALSE;
+//            for (int i = 0; i < nfds; ++i) {
+//                if(pollfd[i].fd == -1){
+//                    for(int j =0; j< nfds-1; j++){
+//                        pollfd[j].fd = pollfd[j+1].fd;
+//                    }
+//                    i--;
+//                    nfds--;
+//                }
+//            }
+//        }
+//    } while (end_server == FALSE);
+//
+//    for (int i = 0; i < nfds; ++i) {
+//        if (pollfd[i].fd >= 0){
+//            close(pollfd[i].fd);
+//        }
+//    }
 
     return EXIT_SUCCESS;
 }
@@ -325,6 +326,28 @@ static void trace_reporter(__attribute__((unused)) const struct dc_posix_env *en
                            size_t line_number)
 {
     fprintf(stdout, "TRACE: %s : %s : @ %zu\n", file_name, function_name, line_number);
+}
+
+struct channelList* createChannelList(){
+    ChannelList *temp = NULL;
+    channel *global = NULL;
+    userList *list = NULL;
+
+    list->userCount = 0;
+    list->next = NULL;
+
+    global->channel_id = 0;
+
+    printf("something\n");
+
+    global->users = list;
+
+    printf("something\n");
+
+    temp->channelCount = 1;
+    temp->next = global;
+
+    return temp;
 }
 
 

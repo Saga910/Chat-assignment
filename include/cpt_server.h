@@ -7,10 +7,39 @@
 
 #include "common.h"
 
-struct username_id_pair{
-    uint16_t user_id;
-    char *username;
+typedef struct userList{
+    int userCount;
+    struct userList *next;
+}userList;
+
+typedef struct user{
+    int user_id;
+    int user_fd;
+}user;
+
+typedef struct channelList{
+    int channelCount;
+    struct channel *next;
+}ChannelList;
+
+typedef struct channel{
+    uint16_t channel_id;
+    struct userList *users;
+    struct channel *next;
+}channel;
+
+struct serverInfo{
+
+    ChannelList *list;
 };
+
+/**
+ * Initialize a channelList object
+ *
+ * @param channel_list
+ * @param user_list
+ */
+void channel_init(struct channelList channel_list, struct userList user_list);
 
 /**
  * Handle a received 'LOGIN' protocol message.
