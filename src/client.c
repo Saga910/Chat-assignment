@@ -257,9 +257,15 @@ size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name){
     //send(name)
     //receive(serial_buf)
     //parse(serial_buf) for response
+    //start hereee
     //if (serial_buf_response == success_code)
+    // if (name != NULL)
+    //assign client info user = name
+    // else return
     //serialized_buf = serialize(serial_buf)
     //return sizeof (serialized_buf)
+
+
 
     return status;
 }
@@ -290,11 +296,24 @@ size_t cpt_join_channel(void * client_info, uint8_t * serial_buf, uint16_t chann
 
 size_t cpt_leave_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id){
 
+    //client_info set channel_id to 0 (global)
+    //serialize (channel_id)
+    //add serialized (chan_id) to the serial_buff
+    //return the serial_buf
+
 }
 
-int cpt_send(void * client_info, uint8_t * serial_buf, char * msg){
-    int status = 0;
+size_t cpt_send(void * client_info, uint8_t * serial_buf, char * msg)
+{
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->msg = msg;
+    new_req->command = SEND;
+    new_req->msg_len = sizeof (msg);
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
 
-    return status;
+    return req_size;
+
 }
 
