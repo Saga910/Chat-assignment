@@ -327,11 +327,10 @@ static void trace_reporter(__attribute__((unused)) const struct dc_posix_env *en
     fprintf(stdout, "TRACE: %s : %s : @ %zu\n", file_name, function_name, line_number);
 }
 
+//get server info first
 
 int cpt_login_response(void * server_info, char * name){
     int status = 0;
-
-    
 
     return status;
 }

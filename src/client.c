@@ -13,15 +13,6 @@
 #include <unistd.h>
 #include "cpt_client.h"
 
-#define SEND 0
-#define LOGOUT 1
-#define LOGIN 2
-#define GET_USERS 3
-#define CREATE_CHAN 4
-#define JOIN_CHAN 6
-#define LEAVE_CHAN 7
-#define CREATE_PRIVATE_CHAN 8
-
 #define BUFFER 1024
 
 struct application_settings
@@ -250,56 +241,76 @@ static void trace_reporter(__attribute__((unused)) const struct dc_posix_env *en
 }
 
 
-size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name){
-    size_t status = 0;
+size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name)
+{
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->command = LOGIN;
+    new_req->msg = name;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
 
-    //possible sol?
-    //send(name)
-    //receive(serial_buf)
-    //parse(serial_buf) for response
-    //start hereee
-    //if (serial_buf_response == success_code)
-    // if (name != NULL)
-    //assign client info user = name
-    // else return
-    //serialized_buf = serialize(serial_buf)
-    //return sizeof (serialized_buf)
-
-
-
-    return status;
+    return req_size;
 }
 
-size_t cpt_logout(void * client_info, uint8_t * serial_buf){
-    size_t status = 0;
+size_t cpt_logout(void * client_info, uint8_t * serial_buf)
+{
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->command = LOGOUT;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
 
-    return status;
+    return req_size;
 }
 
-size_t cpt_get_users(void * client_info, uint8_t * serial_buf, uint16_t channel_id){
-    size_t status = 0;
+size_t cpt_get_users(void * client_info, uint8_t * serial_buf, uint16_t channel_id)
+{
 
-    return status;
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->command = GET_USERS;
+    new_req->channel_id = channel_id;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
+
+    return req_size;
+
 }
 
 size_t cpt_create_channel(void * client_info, uint8_t * serial_buf, char * user_list){
-    size_t status = 0;
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->channel_id = 0;
+    new_req->command = CREATE_CHANNEL;
+    new_req->msg = user_list;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
 
-    return status;
+    return req_size;
 }
 
 size_t cpt_join_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id){
-    size_t status = 0;
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->channel_id = channel_id;
+    new_req->command = JOIN_CHANNEL;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
 
-    return status;
+    return req_size;
 }
 
 size_t cpt_leave_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id){
 
-    //client_info set channel_id to 0 (global)
-    //serialize (channel_id)
-    //add serialized (chan_id) to the serial_buff
-    //return the serial_buf
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->channel_id = channel_id;
+    new_req->command = LEAVE_CHANNEL;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
+
+    return req_size;
 
 }
 
