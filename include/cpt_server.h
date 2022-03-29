@@ -15,12 +15,8 @@ typedef struct userList{
 typedef struct user{
     int user_id;
     int user_fd;
+    struct user *next;
 }user;
-
-typedef struct channelList{
-    int channelCount;
-    struct channel *next;
-}ChannelList;
 
 typedef struct channel{
     uint16_t channel_id;
@@ -30,16 +26,49 @@ typedef struct channel{
 
 struct serverInfo{
 
-    ChannelList *list;
+    channel global;
 };
 
 /**
  * Initialize a channelList object
  *
- * @param channel_list
- * @param user_list
  */
-void channel_init(struct channelList channel_list, struct userList user_list);
+channel *createChannelList(void);
+
+/**
+ *
+ * @param list
+ * @param input
+ */
+void add_Channel(channel *list,channel *input);
+
+/**
+ *
+ * @param list
+ * @param id
+ * @return
+ */
+channel * create_channel(userList *list, uint16_t id);
+
+/**
+ *
+ * @param ch
+ */
+void destroy_channel(channel *ch);
+
+/**
+ *
+ * @param client
+ */
+void destroy_user(user *client);
+
+/**
+ *
+ * @param fd
+ * @param id
+ * @return
+ */
+user * create_user(int fd, int id);
 
 /**
  * Handle a received 'LOGIN' protocol message.

@@ -18,7 +18,8 @@
  *  along with dc_dump.  If not, see <https://www.gnu.org/licenses/>.
  */
 #include <string.h>
-#include <stdint-gcc.h>
+#include <stdint.h>
+
 
 #define VERSION 1.1
 #define SUCCESS 1
