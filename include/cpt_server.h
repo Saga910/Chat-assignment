@@ -25,7 +25,6 @@ typedef struct channel{
 }channel;
 
 struct serverInfo{
-
     channel global;
 };
 

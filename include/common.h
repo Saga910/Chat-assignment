@@ -21,6 +21,8 @@
 #include <string.h>
 
 
+
+
 #define VERSION 1.1
 #define SUCCESS 1
 #define MESSAGE 2
@@ -67,11 +69,7 @@ struct CptRequest{
 
 struct CptResponse{
     uint8_t code;
-    uint8_t *data;
     uint16_t data_size;
-};
-
-struct CptMsgResponse{
     uint16_t channel_id;
     uint16_t user_id;
     uint16_t msg_len;

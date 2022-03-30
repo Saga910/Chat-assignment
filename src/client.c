@@ -12,8 +12,11 @@
 #include <netdb.h>
 #include <unistd.h>
 #include "cpt_client.h"
+#include "common.h"
 
 #define BUFFER 1024
+#define TRUE 1
+#define FALSE 0
 
 struct application_settings
 {
@@ -155,74 +158,100 @@ static int destroy_settings(const struct dc_posix_env *env,
 static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_application_settings *settings)
 {
     struct application_settings *app_settings;
-    int sd = -1, rc, bytes;
-    char   buffer[BUFFER];
-    char sesrver[BUFFER];
-    struct sockaddr_in6 serveradrr;
+    int    sd = -1, rc;
+    char   *buffer;
+    struct sockaddr_in6 sockaddrIn6;
     struct addrinfo hints, *res;
-    char *server;
-    char *port;
+    const char *server, *port;
 
     DC_TRACE(env);
 
     app_settings = (struct application_settings *)settings;
 
-    server = (char *) app_settings->IP;
-    port = (char *) app_settings->port;
+    server = dc_setting_string_get(env, app_settings->IP);
+    port = dc_setting_string_get(env, app_settings->port);
 
-    do {
+
+    do
+    {
         sd = socket(AF_INET6, SOCK_STREAM, 0);
-        if(sd < 0){
-            perror("socket failed");
+        if (sd < 0)
+        {
+            perror("socket() failed");
             break;
         }
 
         memset(&hints, 0, sizeof(hints));
         hints.ai_family = AF_INET6;
-        hints.ai_flags = AI_V4MAPPED;
         hints.ai_socktype = SOCK_STREAM;
+        hints.ai_flags = AI_V4MAPPED;
         rc = getaddrinfo(server, port, &hints, &res);
-        if (rc != 0){
-            printf("Host not found %s\n", server);
-            perror("getaddreinfo() fialed\n");
+
+        if (rc != 0)
+        {
+            printf("Host not found! (%s)\n", server);
+            perror("getaddrinfo() failed\n");
             break;
         }
-        dc_memcpy(env,&serveradrr, res->ai_addr, sizeof(serveradrr));
+
+        memcpy(&sockaddrIn6, res->ai_addr, sizeof(sockaddrIn6));
 
         freeaddrinfo(res);
 
-        rc = dc_connect(env, err, socket_fd, (struct sockaddr *)&serveradrr, sizeof(serveradrr));
-
-        if(rc < 0){
+        rc = connect(sd, (struct sockaddr *)&sockaddrIn6, sizeof(sockaddrIn6));
+        if (rc < 0)
+        {
             perror("connect() failed");
             break;
         }
 
-        dc_memset(env, buffer, 'c', sizeof(buffer));
+        while (TRUE){
 
-        rc = dc_send(env, err, socket_fd, buffer, sizeof(buffer), 0);
-        if (rc < 0){
-            perror("send failed");
-            break;
-        }
+            uint8_t *buff;
+            size_t size;
+            void *client;
 
-        bytes = 0;
-        while (bytes < BUFFER){
-            rc = dc_recv(env, err, socket_fd, &buffer[bytes], BUFFER - bytes, 0);
-            if(rc <0 ){
-                perror("recv failed");
-                break;
-            } else if (rc == 0){
-                printf("The serve closed the connection");
+            size_t t;
+            t = read(STDIN_FILENO, server, sizeof());
+
+            if(strcmp(server, "LOGOUT") == 0){
                 break;
             }
 
-            bytes += rc;
-        }
-    } while (1);
+            size = cpt_send(client, buff, server);
 
-    if (socket_fd != -1){
-        close(socket_fd);
+            printf("::::%zu\n",size);
+
+//            rc = send(sd, server, t, 0);
+//            if (rc < 0)
+//            {
+//                perror("send() failed");
+//                break;
+//            }
+//
+//            rc = recv(sd, &buffer, sizeof(buffer), 0);
+//
+//            printf("%s\n", buffer);
+
+            if (rc < 0)
+            {
+                perror("recv() failed");
+                break;
+            }
+            else if (rc == 0)
+            {
+                printf("The server closed the connection\n");
+                break;
+            }
+
+
+        }
+
+
+    } while (FALSE);
+
+    if (sd != -1) {
+        close(sd);
     }
 
     return EXIT_SUCCESS;

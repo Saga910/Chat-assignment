@@ -14,12 +14,12 @@
 #include <netinet/in.h>
 #include <sys/poll.h>
 #include "cpt_server.h"
+#include "common.h"
 
 
 struct application_settings
 {
     struct dc_opt_settings opts;
-    struct dc_setting_string *IP;
     struct dc_setting_string *port;
 };
 
@@ -72,7 +72,6 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
     }
 
     settings->opts.parent.config_path = dc_setting_path_create(env, err);
-    settings->IP = dc_setting_string_create(env, err);
     settings->port = dc_setting_string_create(env, err);
 
     struct options opts[] = {
@@ -86,16 +85,6 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     NULL,
                     dc_string_from_config,
                     NULL},
-            {(struct dc_setting *)settings->IP,
-                    dc_options_set_string,
-                    "ip",
-                    required_argument,
-                    'i',
-                    "IP",
-                    dc_string_from_string,
-                    "ip",
-                    dc_string_from_config,
-                    "127.0.0.1"},
             {(struct dc_setting *)settings->port,
                     dc_options_set_string,
                     "port",
@@ -113,7 +102,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
     settings->opts.opts_size = sizeof(struct options);
     settings->opts.opts = dc_calloc(env, err, settings->opts.opts_count, settings->opts.opts_size);
     dc_memcpy(env, settings->opts.opts, opts, sizeof(opts));
-    settings->opts.flags = "c:i:p";
+    settings->opts.flags = "c:p";
     settings->opts.env_prefix = "DC_CHAT_";
 
     return (struct dc_application_settings *)settings;
@@ -127,7 +116,6 @@ static int destroy_settings(const struct dc_posix_env *env,
 
     DC_TRACE(env);
     app_settings = (struct application_settings *)*psettings;
-    dc_setting_string_destroy(env, &app_settings->IP);
     dc_setting_string_destroy(env, &app_settings->port);
     dc_free(env, app_settings->opts.opts, app_settings->opts.opts_count);
     dc_free(env, *psettings, sizeof(struct application_settings));
@@ -143,32 +131,25 @@ static int destroy_settings(const struct dc_posix_env *env,
 static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_application_settings *settings)
 {
     int TRUE = 1, FALSE = 0;
-    int socket_fd = -1, reusable, on = 1, rc, timeout, current_size=0, nfds = 1;
+    int socket_fd = -1, reusable, on = 1, timeout = 180000, current_size=0, nfds = 1;
     struct sockaddr_in6 sockaddrIn;
-    struct sockaddr_in sock;
     struct pollfd pollfd[35];
     int end_server = 0, compress = 0, new_sd = -1, close_conn, len;
     char buffer[1024];
+    const char* port;
+    ssize_t rc;
 
     DC_TRACE(env);
 
-    app_settings = (struct application_settings *)settings;
-    port = dc_setting_uint16_get(env, app_settings->port);
-    version = dc_setting_string_get(env, app_settings->version);
+    struct application_settings *app_settings = (struct application_settings *) settings;
+
+    port = dc_setting_string_get(env, app_settings->port);
 
     channel *list;
 
     list = createChannelList();
 
-    if(dc_strcmp(env, version, "IPv4") == 0){
-        socket_fd = dc_socket(env, err, AF_INET, SOCK_STREAM, 0);
-    } else{
-        if(dc_strcmp(env, version, "IPv6") == 0){
-            socket_fd = dc_socket(env, err,AF_INET6, SOCK_STREAM, 0);
-        }else{
-            DC_ERROR_RAISE_USER(err, "Incorrect ipv", -1);
-        }
-    }
+    socket_fd = dc_socket(env, err,AF_INET6, SOCK_STREAM, 0);
 
     if(socket_fd < 0){
         perror("Failed to create a socket.");
@@ -190,26 +171,12 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
         exit(-1);
     }
 
+    dc_memset(env, &sockaddrIn, 0, sizeof(sockaddrIn));
+    sockaddrIn.sin6_family = AF_INET6;
+    dc_memcpy(env,&sockaddrIn.sin6_addr, &in6addr_any, sizeof(in6addr_any));
+    sockaddrIn.sin6_port = htons((uint16_t) *port);
+    rc = dc_bind(env, err,socket_fd, (struct sockaddr *)&sockaddrIn, sizeof(sockaddrIn));
 
-    if(dc_strcmp(env, version, "IPv4") == 0){
-        dc_memset(env, &sock, 0, sizeof(sock));
-        sock.sin_family = AF_INET;
-        sock.sin_port = htons(port);
-        rc = dc_bind(env, err, socket_fd, (struct sockaddr *)&sock, sizeof(sock));
-
-    } else{
-        if(dc_strcmp(env, version, "IPv6") == 0){
-
-            dc_memset(env, &sockaddrIn, 0, sizeof(sockaddrIn));
-            sockaddrIn.sin6_family = AF_INET6;
-            dc_memcpy(env,&sockaddrIn.sin6_addr, &in6addr_any, sizeof(in6addr_any));
-            sockaddrIn.sin6_port = htons(port);
-            rc = dc_bind(env, err,socket_fd, (struct sockaddr *)&sockaddrIn, sizeof(sockaddrIn));
-
-        } else{
-            DC_ERROR_RAISE_USER(err, "Incorrect ipv", -1);
-        }
-    }
 
     if(rc < 0){
         perror("bind() failed");
@@ -227,8 +194,6 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
     dc_memset(env,pollfd, 0, sizeof(pollfd));
     pollfd[0].fd = socket_fd;
     pollfd[0].events = POLLIN;
-
-    timeout = (3 * 60 * 1000);
 
     do {
         printf("Waiting on poll()....\n");
@@ -299,7 +264,6 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
                     }
 
                     len = rc;
-                    printf("%d bytes received\n", len);
                     printf("Message: %s\n", buffer);
 
                     rc = dc_send(env, err,pollfd[i].fd, buffer, len, 0);

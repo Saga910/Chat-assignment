@@ -239,7 +239,7 @@ char * uint8_to_bin(uint8_t num)
     return bin_str;
 }
 
-char * uint16_to_bin(uint16_t num)
+char*  uint16_to_bin(uint16_t num)
 {
     int bits = 16;
     char * bin_str;
