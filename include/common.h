@@ -20,9 +20,6 @@
 #include <stdint.h>
 #include <string.h>
 
-
-
-
 #define VERSION 1.1
 #define SUCCESS 1
 #define MESSAGE 2
@@ -167,21 +164,28 @@ struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size);
 struct CptRequest * cpt_parse_request(uint8_t * req_buf, size_t req_size);
 
 /**
- * Helper function that converts uint8_t to string.
- *
- * Takes a uint8_t value and performs conversion to string.
+ * Helper function that converts uint8_t to a
+ * string with the binary representation.
  *
  * @param num
+ * @return a binary in string form
  */
-const char * uint8_to_str(uint8_t num);
-
+char * uint8_to_bin(uint8_t num);
 /**
- * Helper function that converts uint16_t to string.
- *
- * Takes a uint16_t value and performs conversion to string.
+ * Helper function that converts uint8_t to a
+ * string with the binary representation.
  *
  * @param num
+ * @return a binary in string form
  */
-const char *  uint16_to_str(uint16_t num);
+char * uint16_to_bin(uint16_t num);
+/**
+ * Helper function that converts binary string
+ * to an integer representation.
+ *
+ * @param str
+ * @return a str in integer form
+ */
+int bin_to_dec(char * str);
 
 #endif // TEMPLATE_COMMON_H
