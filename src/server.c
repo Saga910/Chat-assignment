@@ -19,8 +19,8 @@
 struct application_settings
 {
     struct dc_opt_settings opts;
-    struct dc_setting_uint16 *port;
-    struct dc_setting_string *version;
+    struct dc_setting_string *IP;
+    struct dc_setting_string *port;
 };
 
 
@@ -72,8 +72,8 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
     }
 
     settings->opts.parent.config_path = dc_setting_path_create(env, err);
-    settings->port = dc_setting_uint16_create(env, err);
-    settings->version = dc_setting_string_create(env, err);
+    settings->IP = dc_setting_string_create(env, err);
+    settings->port = dc_setting_string_create(env, err);
 
     struct options opts[] = {
             {(struct dc_setting *)settings->opts.parent.config_path,
@@ -86,8 +86,18 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     NULL,
                     dc_string_from_config,
                     NULL},
+            {(struct dc_setting *)settings->IP,
+                    dc_options_set_string,
+                    "ip",
+                    required_argument,
+                    'i',
+                    "IP",
+                    dc_string_from_string,
+                    "ip",
+                    dc_string_from_config,
+                    "127.0.0.1"},
             {(struct dc_setting *)settings->port,
-                    dc_options_set_uint16,
+                    dc_options_set_string,
                     "port",
                     required_argument,
                     'p',
@@ -96,16 +106,6 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     "port",
                     dc_string_from_config,
                     "8080"},
-            {(struct dc_setting *)settings->version,
-                    dc_options_set_string,
-                    "version",
-                    required_argument,
-                    'v',
-                    "VERSION",
-                    dc_string_from_string,
-                    "version",
-                    dc_string_from_config,
-                    "IPv4"},
     };
 
     // note the trick here - we use calloc and add 1 to ensure the last line is all 0/NULL
@@ -113,7 +113,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
     settings->opts.opts_size = sizeof(struct options);
     settings->opts.opts = dc_calloc(env, err, settings->opts.opts_count, settings->opts.opts_size);
     dc_memcpy(env, settings->opts.opts, opts, sizeof(opts));
-    settings->opts.flags = "c:i:p:v";
+    settings->opts.flags = "c:i:p";
     settings->opts.env_prefix = "DC_CHAT_";
 
     return (struct dc_application_settings *)settings;
@@ -127,8 +127,8 @@ static int destroy_settings(const struct dc_posix_env *env,
 
     DC_TRACE(env);
     app_settings = (struct application_settings *)*psettings;
-    dc_setting_uint16_destroy(env, &app_settings->port);
-    dc_setting_string_destroy(env, &app_settings->version);
+    dc_setting_string_destroy(env, &app_settings->IP);
+    dc_setting_string_destroy(env, &app_settings->port);
     dc_free(env, app_settings->opts.opts, app_settings->opts.opts_count);
     dc_free(env, *psettings, sizeof(struct application_settings));
 
@@ -149,10 +149,6 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
     struct pollfd pollfd[35];
     int end_server = 0, compress = 0, new_sd = -1, close_conn, len;
     char buffer[1024];
-
-    const char *version;
-    uint16_t port;
-    struct application_settings *app_settings;
 
     DC_TRACE(env);
 
@@ -425,6 +421,13 @@ int cpt_logout_response(void * server_info){
 
     return status;
 }
+int cpt_get_users_response(void * server_info, uint16_t channel_id){
+    int status = 0;
+
+    return status;
+}
+int cpt_join_channel_response(void * server_info, uint16_t channel_id){
+    int status = 0;
 
 int cpt_send_response(void * server_info, char * name){
     int status = 0;

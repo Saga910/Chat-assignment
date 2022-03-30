@@ -11,17 +11,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
-#include <dc_posix/sys/dc_socket.h>
 #include "cpt_client.h"
-
-#define SEND 0
-#define LOGOUT 1
-#define LOGIN 2
-#define GET_USERS 3
-#define CREATE_CHAN 4
-#define JOIN_CHAN 6
-#define LEAVE_CHAN 7
-#define CREATE_PRIVATE_CHAN 8
 
 #define BUFFER 1024
 
@@ -31,7 +21,6 @@ struct application_settings
     struct dc_setting_string *IP;
     struct dc_setting_string *port;
     struct dc_setting_string *ID;
-    struct dc_setting_string *version;
 };
 
 
@@ -85,7 +74,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
     settings->IP = dc_setting_string_create(env, err);
     settings->port = dc_setting_string_create(env, err);
     settings->ID = dc_setting_string_create(env, err);
-    settings->version = dc_setting_string_create(env, err);
+
 
     struct options opts[] = {
             {(struct dc_setting *)settings->opts.parent.config_path,
@@ -127,17 +116,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_string,
                     "id",
                     dc_string_from_config,
-                    "Default"},
-            {(struct dc_setting *)settings->version,
-                        dc_options_set_string,
-                        "version",
-                        required_argument,
-                        'v',
-                        "VERSION",
-                        dc_string_from_string,
-                        "version",
-                        dc_string_from_config,
-                        "IPv4"},
+                    "Default"}
     };
 
     // note the trick here - we use calloc and add 1 to ensure the last line is all 0/NULL
@@ -162,7 +141,6 @@ static int destroy_settings(const struct dc_posix_env *env,
     dc_setting_string_destroy(env, &app_settings->ID);
     dc_setting_string_destroy(env, &app_settings->IP);
     dc_setting_string_destroy(env, &app_settings->port);
-    dc_setting_string_destroy(env, &app_settings->version);
     dc_free(env, app_settings->opts.opts, app_settings->opts.opts_count);
     dc_free(env, *psettings, sizeof(struct application_settings));
 
@@ -176,62 +154,34 @@ static int destroy_settings(const struct dc_posix_env *env,
 
 static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_application_settings *settings)
 {
-    struct  application_settings *app_settings;
-    int     socket_fd = -1, rc, bytes;
-    char    buffer[BUFFER];
-    char    server[BUFFER];
-    struct  sockaddr_in6 serveradrr;
-    struct  sockaddr_in sock;
-    struct  addrinfo hints, *res;
-    const char *servername, *port, *version, *id;
+    struct application_settings *app_settings;
+    int sd = -1, rc, bytes;
+    char   buffer[BUFFER];
+    char sesrver[BUFFER];
+    struct sockaddr_in6 serveradrr;
+    struct addrinfo hints, *res;
+    char *server;
+    char *port;
 
     DC_TRACE(env);
 
     app_settings = (struct application_settings *)settings;
-    servername = dc_setting_string_get(env, app_settings->IP);
-    port = dc_setting_string_get(env, app_settings->port);
-    id = dc_setting_string_get(env, app_settings->ID);
-    version = dc_setting_string_get(env, app_settings->version);
+
+    server = (char *) app_settings->IP;
+    port = (char *) app_settings->port;
 
     do {
-
-        if(dc_strcmp(env, version, "IPv4") == 0){
-            socket_fd = dc_socket(env, err, AF_INET, SOCK_STREAM, 0);
-        } else{
-            if(dc_strcmp(env, version, "IPv6") == 0){
-                socket_fd = dc_socket(env, err, AF_INET6, SOCK_STREAM, 0);
-            }else{
-                DC_ERROR_RAISE_USER(err, "Incorrect ipv", -1);
-            }
-        }
-
-        if(socket_fd < 0){
+        sd = socket(AF_INET6, SOCK_STREAM, 0);
+        if(sd < 0){
             perror("socket failed");
             break;
         }
 
-        if(dc_strcmp(env, version, "IPv4") == 0){
-
-            memset(&hints, 0, sizeof(hints));
-            hints.ai_family = AF_INET;
-            hints.ai_flags = AI_V4MAPPED;
-            hints.ai_socktype = SOCK_STREAM;
-
-        } else{
-            if(dc_strcmp(env, version, "IPv6") == 0){
-
-                memset(&hints, 0, sizeof(hints));
-                hints.ai_family = AF_INET6;
-                hints.ai_flags = AI_V4MAPPED;
-                hints.ai_socktype = SOCK_STREAM;
-
-            }else{
-                DC_ERROR_RAISE_USER(err, "Incorrect ipv", -1);
-            }
-        }
-
-        rc = getaddrinfo(servername, port, &hints, &res);
-
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET6;
+        hints.ai_flags = AI_V4MAPPED;
+        hints.ai_socktype = SOCK_STREAM;
+        rc = getaddrinfo(server, port, &hints, &res);
         if (rc != 0){
             printf("Host not found %s\n", server);
             perror("getaddreinfo() fialed\n");
@@ -293,29 +243,90 @@ static void trace_reporter(__attribute__((unused)) const struct dc_posix_env *en
 }
 
 
-size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name){
-    size_t status = 0;
+size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name)
+{
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->command = LOGIN;
+    new_req->msg = name;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
 
-    //possible sol?
-    //send(name)
-    //receive(serial_buf)
-    //parse(serial_buf) for response
-    //if (serial_buf_response == success_code)
-    //serialized_buf = serialize(serial_buf)
-    //return sizeof (serialized_buf)
-
-    return status;
+    return req_size;
 }
 
-size_t cpt_logout(void * client_info, uint8_t * serial_buf){
-    size_t status = 0;
+size_t cpt_logout(void * client_info, uint8_t * serial_buf)
+{
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->command = LOGOUT;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
 
-    return status;
+    return req_size;
 }
 
-int cpt_send(void * client_info, uint8_t * serial_buf, char * msg){
-    int status = 0;
+size_t cpt_get_users(void * client_info, uint8_t * serial_buf, uint16_t channel_id)
+{
 
-    return status;
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->command = GET_USERS;
+    new_req->channel_id = channel_id;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
+
+    return req_size;
+
+}
+
+size_t cpt_create_channel(void * client_info, uint8_t * serial_buf, char * user_list){
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->channel_id = 0;
+    new_req->command = CREATE_CHANNEL;
+    new_req->msg = user_list;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
+
+    return req_size;
+}
+
+size_t cpt_join_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id){
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->channel_id = channel_id;
+    new_req->command = JOIN_CHANNEL;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
+
+    return req_size;
+}
+
+size_t cpt_leave_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id){
+
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->channel_id = channel_id;
+    new_req->command = LEAVE_CHANNEL;
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
+
+    return req_size;
+
+}
+
+size_t cpt_send(void * client_info, uint8_t * serial_buf, char * msg)
+{
+    struct CptRequest * new_req;
+    new_req = cpt_request_init();
+    new_req->msg = msg;
+    new_req->command = SEND;
+    new_req->msg_len = sizeof (msg);
+    size_t req_size;
+    req_size = cpt_serialize_request(new_req, serial_buf);
+
+    return req_size;
+
 }
 

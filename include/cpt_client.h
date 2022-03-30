@@ -7,6 +7,12 @@
 
 #include "common.h"
 
+struct client_info
+{
+    uint16_t user_id;
+    uint16_t channel_id;
+};
+
 /**
  * Prepare a LOGIN request packet for the server.
  *
@@ -116,7 +122,7 @@ size_t cpt_leave_channel(void * client_info, uint8_t * serial_buf, uint16_t chan
  * @param msg            Intended chat message.
  * @return Size of the resulting serialized packet in <serial_buf>.
 */
-int cpt_send(void * client_info, uint8_t * serial_buf, char * msg);
+size_t cpt_send(void * client_info, uint8_t * serial_buf, char * msg);
 
 
 
