@@ -184,7 +184,7 @@ char * uint16_to_bin(uint16_t num);
  * to an integer representation.
  *
  * @param str
- * @return str in integer form
+ * @return a str in integer form
  */
 int bin_to_dec(char * str);
 
