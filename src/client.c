@@ -1,3 +1,5 @@
+#include "common.h"
+#include "cpt_client.h"
 #include <dc_application/command_line.h>
 #include <dc_application/config.h>
 #include <dc_application/defaults.h>
@@ -6,23 +8,22 @@
 #include <dc_posix/dc_stdlib.h>
 #include <dc_posix/dc_string.h>
 #include <getopt.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <netinet/in.h>
-#include <netdb.h>
 #include <unistd.h>
-#include "cpt_client.h"
-#include "common.h"
+#include <dc_posix/dc_netdb.h>
+#include <dc_posix/sys/dc_socket.h>
 
 #define BUFFER 1024
-#define TRUE 1
 #define FALSE 0
 
 struct application_settings
 {
     struct dc_opt_settings opts;
     struct dc_setting_string *IP;
-    struct dc_setting_string *port;
+    struct dc_setting_uint16 *port;
     struct dc_setting_string *ID;
 };
 
@@ -63,6 +64,7 @@ int main(int argc, char *argv[])
 
 static struct dc_application_settings *create_settings(const struct dc_posix_env *env, struct dc_error *err)
 {
+    static const uint16_t defaultport = 8080;
     struct application_settings *settings;
 
     DC_TRACE(env);
@@ -75,7 +77,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
 
     settings->opts.parent.config_path = dc_setting_path_create(env, err);
     settings->IP = dc_setting_string_create(env, err);
-    settings->port = dc_setting_string_create(env, err);
+    settings->port = dc_setting_uint16_create(env, err);
     settings->ID = dc_setting_string_create(env, err);
 
 
@@ -101,7 +103,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_config,
                     "127.0.0.1"},
             {(struct dc_setting *)settings->port,
-                    dc_options_set_string,
+                    dc_options_set_uint16,
                     "port",
                     required_argument,
                     'p',
@@ -109,7 +111,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_string,
                     "port",
                     dc_string_from_config,
-                    "8080"},
+                    &defaultport},
             {(struct dc_setting *)settings->ID,
                     dc_options_set_string,
                     "id",
@@ -143,7 +145,7 @@ static int destroy_settings(const struct dc_posix_env *env,
     app_settings = (struct application_settings *)*psettings;
     dc_setting_string_destroy(env, &app_settings->ID);
     dc_setting_string_destroy(env, &app_settings->IP);
-    dc_setting_string_destroy(env, &app_settings->port);
+    dc_setting_uint16_destroy(env, &app_settings->port);
     dc_free(env, app_settings->opts.opts, app_settings->opts.opts_count);
     dc_free(env, *psettings, sizeof(struct application_settings));
 
@@ -158,100 +160,110 @@ static int destroy_settings(const struct dc_posix_env *env,
 static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_application_settings *settings)
 {
     struct application_settings *app_settings;
-    int    sd = -1, rc;
-    char   *buffer;
-    struct sockaddr_in6 sockaddrIn6;
-    struct addrinfo hints, *res;
-    const char *server, *port;
+    int sockfd = -1;
+    char   send_buf[BUFFER];
+    char   recv_buf[BUFFER];
+    const char *server;
+    uint16_t port;
+    ssize_t rc;
+    struct sockaddr_in6 *sockaddrIn;
+    struct addrinfo hints;
+    struct addrinfo *res=NULL;
+    in_port_t converted_port;
+    socklen_t size;
 
     DC_TRACE(env);
 
     app_settings = (struct application_settings *)settings;
 
     server = dc_setting_string_get(env, app_settings->IP);
-    port = dc_setting_string_get(env, app_settings->port);
-
+    port = dc_setting_uint16_get(env, app_settings->port);
+    converted_port = htons(port);
 
     do
     {
-        sd = socket(AF_INET6, SOCK_STREAM, 0);
-        if (sd < 0)
+        dc_memset(env, &hints, 0, sizeof(hints));
+        hints.ai_family = PF_INET6;
+        hints.ai_socktype = SOCK_STREAM;
+        hints.ai_flags = AI_V4MAPPED;
+        rc = dc_getaddrinfo(env, err, server, NULL, &hints, &res);
+
+        if (rc != 0)
+        {
+            printf("Host not found --> %s\n", gai_strerror(rc));
+            if (rc == EAI_SYSTEM)
+                perror("getaddrinfo() failed");
+            break;
+        }
+
+
+        sockfd = dc_socket(env, err, res->ai_family, res->ai_socktype, res->ai_protocol);
+        if (sockfd < 0)
         {
             perror("socket() failed");
             break;
         }
 
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_INET6;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_flags = AI_V4MAPPED;
-        rc = getaddrinfo(server, port, &hints, &res);
+        sockaddrIn = (struct sockaddr_in6 *)res->ai_addr;
+        sockaddrIn->sin6_port = converted_port;
+        size = sizeof(struct sockaddr_in6);
 
-        if (rc != 0)
-        {
-            printf("Host not found! (%s)\n", server);
-            perror("getaddrinfo() failed\n");
-            break;
-        }
+        rc = dc_connect(env, err, sockfd, res->ai_addr, size);
 
-        memcpy(&sockaddrIn6, res->ai_addr, sizeof(sockaddrIn6));
-
-        freeaddrinfo(res);
-
-        rc = connect(sd, (struct sockaddr *)&sockaddrIn6, sizeof(sockaddrIn6));
         if (rc < 0)
         {
             perror("connect() failed");
             break;
         }
 
-        while (TRUE){
+        while (1){
 
-            uint8_t *buff;
-            size_t size;
-            void *client;
-
-            size_t t;
-            t = read(STDIN_FILENO, server, sizeof());
-
-            if(strcmp(server, "LOGOUT") == 0){
-                break;
-            }
-
-            size = cpt_send(client, buff, server);
-
-            printf("::::%zu\n",size);
-
-//            rc = send(sd, server, t, 0);
-//            if (rc < 0)
-//            {
-//                perror("send() failed");
-//                break;
-//            }
-//
-//            rc = recv(sd, &buffer, sizeof(buffer), 0);
-//
-//            printf("%s\n", buffer);
+            rc = read(STDIN_FILENO, send_buf, sizeof(send_buf));
 
             if (rc < 0)
             {
-                perror("recv() failed");
+                perror("read() failed");
                 break;
             }
-            else if (rc == 0)
-            {
-                printf("The server closed the connection\n");
-                break;
+
+            if(getchar() == '\n'){
+
+                struct CptRequest *req;
+
+
+                rc = send(sockfd, send_buf, sizeof(send_buf), 0);
+
+                if (rc < 0)
+                {
+                    perror("send() failed");
+                    break;
+                }
+
             }
 
 
         }
 
 
+//        rc = recv(sockfd, recv_buf, sizeof(recv_buf), 0);
+
+        if (rc < 0)
+        {
+            perror("recv() failed");
+            break;
+        }
+
+//        printf("Rec: %s\n", recv_buf);
+
     } while (FALSE);
 
-    if (sd != -1) {
-        close(sd);
+
+    if (sockfd != -1){
+        close(sockfd);
+    }
+
+    if (res != NULL){
+        freeaddrinfo(res);
     }
 
     return EXIT_SUCCESS;
@@ -270,7 +282,6 @@ static void trace_reporter(__attribute__((unused)) const struct dc_posix_env *en
 {
     fprintf(stdout, "TRACE: %s : %s : @ %zu\n", file_name, function_name, line_number);
 }
-
 
 size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name)
 {

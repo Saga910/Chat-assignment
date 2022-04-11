@@ -6,6 +6,7 @@
 #define CHAT_ASSIGNMNET_CPT_CLIENT_H
 
 #include "common.h"
+#include <arpa/inet.h>
 
 struct client_info
 {
@@ -123,7 +124,6 @@ size_t cpt_leave_channel(void * client_info, uint8_t * serial_buf, uint16_t chan
  * @return Size of the resulting serialized packet in <serial_buf>.
 */
 size_t cpt_send(void * client_info, uint8_t * serial_buf, char * msg);
-
 
 
 #endif //CHAT_ASSIGNMNET_CPT_CLIENT_H

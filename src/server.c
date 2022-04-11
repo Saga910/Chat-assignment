@@ -16,11 +16,13 @@
 #include "cpt_server.h"
 #include "common.h"
 
+#define BUFFER 1024
+
 
 struct application_settings
 {
     struct dc_opt_settings opts;
-    struct dc_setting_string *port;
+    struct dc_setting_uint16 *port;
 };
 
 
@@ -47,7 +49,6 @@ int main(int argc, char *argv[])
     int ret_val;
 
     reporter = error_reporter;
-    tracer = trace_reporter;
     tracer = NULL;
     dc_error_init(&err, reporter);
     dc_posix_env_init(&env, tracer);
@@ -61,6 +62,7 @@ int main(int argc, char *argv[])
 
 static struct dc_application_settings *create_settings(const struct dc_posix_env *env, struct dc_error *err)
 {
+    static const uint16_t defaultport = 8080;
     struct application_settings *settings;
 
     DC_TRACE(env);
@@ -72,7 +74,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
     }
 
     settings->opts.parent.config_path = dc_setting_path_create(env, err);
-    settings->port = dc_setting_string_create(env, err);
+    settings->port = dc_setting_uint16_create(env, err);
 
     struct options opts[] = {
             {(struct dc_setting *)settings->opts.parent.config_path,
@@ -86,7 +88,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_config,
                     NULL},
             {(struct dc_setting *)settings->port,
-                    dc_options_set_string,
+                    dc_options_set_uint16,
                     "port",
                     required_argument,
                     'p',
@@ -94,7 +96,7 @@ static struct dc_application_settings *create_settings(const struct dc_posix_env
                     dc_string_from_string,
                     "port",
                     dc_string_from_config,
-                    "8080"},
+                    &defaultport},
     };
 
     // note the trick here - we use calloc and add 1 to ensure the last line is all 0/NULL
@@ -116,7 +118,7 @@ static int destroy_settings(const struct dc_posix_env *env,
 
     DC_TRACE(env);
     app_settings = (struct application_settings *)*psettings;
-    dc_setting_string_destroy(env, &app_settings->port);
+    dc_setting_uint16_destroy(env, &app_settings->port);
     dc_free(env, app_settings->opts.opts, app_settings->opts.opts_count);
     dc_free(env, *psettings, sizeof(struct application_settings));
 
@@ -131,162 +133,191 @@ static int destroy_settings(const struct dc_posix_env *env,
 static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_application_settings *settings)
 {
     int TRUE = 1, FALSE = 0;
-    int socket_fd = -1, reusable, on = 1, timeout = 180000, current_size=0, nfds = 1;
+    int socket_fd = 0, reusable, on = 1, timeout = 180000, current_size=0, nfds = 1, len;
     struct sockaddr_in6 sockaddrIn;
     struct pollfd pollfd[35];
-    int end_server = 0, compress = 0, new_sd = -1, close_conn, len;
-    char buffer[1024];
-    const char* port;
+    int end_server = 0, compress = 0, new_sd = -1, close_conn, compress_array;
+    char buffer[BUFFER];
+    uint16_t port;
     ssize_t rc;
+    in_port_t converted_port;
 
     DC_TRACE(env);
 
     struct application_settings *app_settings = (struct application_settings *) settings;
 
-    port = dc_setting_string_get(env, app_settings->port);
+    port = dc_setting_uint16_get(env, app_settings->port);
+    converted_port = htons(port);
 
-    channel *list;
-
-    list = createChannelList();
-
-    socket_fd = dc_socket(env, err,AF_INET6, SOCK_STREAM, 0);
-
-    if(socket_fd < 0){
-        perror("Failed to create a socket.");
+    socket_fd = socket(AF_INET6, SOCK_STREAM, 0);
+    if (socket_fd < 0)
+    {
+        perror("socket() failed");
         exit(-1);
     }
 
-    reusable = setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
-
-    if(reusable < 0){
-        perror("failed to set socket opt.");
+    rc = setsockopt(socket_fd, SOL_SOCKET,  SO_REUSEADDR,
+                    (char *)&on, sizeof(on));
+    if (rc < 0)
+    {
+        perror("setsockopt() failed");
+        close(socket_fd);
         exit(-1);
     }
 
     rc = ioctl(socket_fd, FIONBIO, (char *)&on);
-
-    if(rc < 0){
+    if (rc < 0)
+    {
         perror("ioctl() failed");
         close(socket_fd);
         exit(-1);
     }
 
-    dc_memset(env, &sockaddrIn, 0, sizeof(sockaddrIn));
-    sockaddrIn.sin6_family = AF_INET6;
-    dc_memcpy(env,&sockaddrIn.sin6_addr, &in6addr_any, sizeof(in6addr_any));
-    sockaddrIn.sin6_port = htons((uint16_t) *port);
-    rc = dc_bind(env, err,socket_fd, (struct sockaddr *)&sockaddrIn, sizeof(sockaddrIn));
-
-
-    if(rc < 0){
+    memset(&sockaddrIn, 0, sizeof(sockaddrIn));
+    sockaddrIn.sin6_family      = AF_INET6;
+    memcpy(&sockaddrIn.sin6_addr, &in6addr_any, sizeof(in6addr_any));
+    sockaddrIn.sin6_port        = htons(port);
+    rc = bind(socket_fd,
+              (struct sockaddr *)&sockaddrIn, sizeof(sockaddrIn));
+    if (rc < 0)
+    {
         perror("bind() failed");
         close(socket_fd);
         exit(-1);
     }
 
     rc = listen(socket_fd, 32);
-    if(rc < 0){
+    if (rc < 0)
+    {
         perror("listen() failed");
         close(socket_fd);
         exit(-1);
     }
 
-    dc_memset(env,pollfd, 0, sizeof(pollfd));
+    memset(pollfd, 0 , sizeof(pollfd));
     pollfd[0].fd = socket_fd;
     pollfd[0].events = POLLIN;
 
-    do {
-        printf("Waiting on poll()....\n");
-
+    do
+    {
+        printf("Waiting on poll()...\n");
         rc = poll(pollfd, (nfds_t) nfds, timeout);
-        if(rc < 0){
+
+        if (rc < 0)
+        {
             perror("  poll() failed");
             break;
         }
 
-        if(rc == 0){
-            printf(" Poll timeout. \n");
+        if (rc == 0)
+        {
+            printf("  poll() timed out.  End program.\n");
             break;
         }
 
         current_size = nfds;
-
-        for(int i = 0; i < current_size; i++){
-            if (pollfd[i].revents == 0){
+        for (int i = 0; i < current_size; i++)
+        {
+            if(pollfd[i].revents == 0)
                 continue;
-            }
 
-            if  (pollfd[i].revents != POLLIN){
-                printf("ERROR! revents = %d\n", pollfd[i].revents);
+            if(pollfd[i].revents != POLLIN)
+            {
+                printf("  Error! revents = %d\n", pollfd[i].revents);
                 end_server = TRUE;
                 break;
+
             }
+            if (pollfd[i].fd == socket_fd)
+            {
+                printf("  Listening socket is readable\n");
 
-            if (pollfd[i].revents == socket_fd){
-                printf("Listening socket is readable\n");
-
-                do {
-                    new_sd = dc_accept(env, err,socket_fd, NULL, NULL);
-                    if(new_sd <0){
-                        if(errno != EWOULDBLOCK){
-                            perror("Accept failed");
+                do
+                {
+                    new_sd = accept(socket_fd, NULL, NULL);
+                    if (new_sd < 0)
+                    {
+                        if (errno != EWOULDBLOCK)
+                        {
+                            perror("  accept() failed");
                             end_server = TRUE;
                         }
                         break;
                     }
 
-                    printf("New incoming connection = %d\n", new_sd);
+                    printf("  New incoming connection - %d\n", new_sd);
                     pollfd[nfds].fd = new_sd;
                     pollfd[nfds].events = POLLIN;
                     nfds++;
-
                 } while (new_sd != -1);
             }
-            else{
-                printf("Descriptor %d is readable\n", pollfd[i].fd);
+
+            else
+            {
+                printf("  Descriptor %d is readable\n", pollfd[i].fd);
                 close_conn = FALSE;
+                do
+                {
 
-                do {
-                    rc = dc_recv(env, err, pollfd[i].fd, buffer, sizeof(buffer), 0);
+                    rc = recv(pollfd[i].fd, buffer, sizeof(buffer), 0);
 
-                    if(rc < 0){
-                        if(errno != EWOULDBLOCK){
-                            perror("recv() failed");
+                    printf("%s\n", buffer);
+
+                    if (rc < 0)
+                    {
+                        if (errno != EWOULDBLOCK)
+                        {
+                            perror("  recv() failed");
                             close_conn = TRUE;
                         }
                         break;
                     }
 
-                    if(rc == 0){
-                        printf("Connection close\n");
+                    if (rc == 0)
+                    {
+                        printf("  Connection closed\n");
                         close_conn = TRUE;
                         break;
                     }
 
                     len = rc;
-                    printf("Message: %s\n", buffer);
 
-                    rc = dc_send(env, err,pollfd[i].fd, buffer, len, 0);
-                    if(rc < 0){
-                        perror("Send failed");
+//                    rc = send(pollfd[i].fd, buffer, len, 0);
+                    if (rc < 0)
+                    {
+                        perror("  send() failed");
                         close_conn = TRUE;
                         break;
                     }
-                } while (TRUE);
 
-                if (close_conn){
+                    CptRequest
+
+                    for(int a=0;a<currentsi; a++){
+                        send(pollfd[i].fd, re)
+                    }
+
+                } while(TRUE);
+
+                if (close_conn)
+                {
                     close(pollfd[i].fd);
                     pollfd[i].fd = -1;
-                    compress = TRUE;
+                    compress_array = TRUE;
                 }
-            }
-        }
 
-        if (compress){
-            compress = FALSE;
-            for (int i = 0; i < nfds; ++i) {
-                if(pollfd[i].fd == -1){
-                    for(int j =0; j< nfds-1; j++){
+
+            }  /* End of existing connection is readable             */
+        } /* End of loop through pollable descriptors              */
+
+        if (compress_array)
+        {
+            compress_array = FALSE;
+            for (int i = 0; i < nfds; i++)
+            {
+                if (pollfd[i].fd == -1)
+                {
+                    for(int j = i; j < nfds-1; j++)
+                    {
                         pollfd[j].fd = pollfd[j+1].fd;
                     }
                     i--;
@@ -294,12 +325,13 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
                 }
             }
         }
-    } while (end_server == FALSE);
 
-    for (int i = 0; i < nfds; ++i) {
-        if (pollfd[i].fd >= 0){
+    } while (end_server == FALSE); /* End of serving running.    */
+
+    for (int i = 0; i < nfds; i++)
+    {
+        if(pollfd[i].fd >= 0)
             close(pollfd[i].fd);
-        }
     }
 
     return EXIT_SUCCESS;
@@ -318,12 +350,15 @@ static void trace_reporter(__attribute__((unused)) const struct dc_posix_env *en
 {
     fprintf(stdout, "TRACE: %s : %s : @ %zu\n", file_name, function_name, line_number);
 }
+
+
+
 channel *createChannelList(){
     channel *global = malloc(sizeof(channel));
     if (global == NULL) {
         printf("ERROR (malloc) : createChannelList()\n");
     }
-    userList *list = malloc(sizeof(userList));
+    struct userList *list = malloc(sizeof(userList));
     if (list == NULL) {
         printf("ERROR (malloc) : createChannelList()\n");
     }
@@ -390,9 +425,9 @@ int cpt_get_users_response(void * server_info, uint16_t channel_id){
 
     return status;
 }
-int cpt_join_channel_response(void * server_info, uint16_t channel_id){
+int cpt_join_channel_response(void * server_info, uint16_t channel_id) {
     int status = 0;
-
+}
 int cpt_send_response(void * server_info, char * name){
     int status = 0;
 
