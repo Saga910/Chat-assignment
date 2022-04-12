@@ -258,10 +258,12 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
                 close_conn = FALSE;
                 do
                 {
+                    uint8_t *incoming = malloc(sizeof(uint8_t*));
 
-                    rc = recv(pollfd[i].fd, buffer, sizeof(buffer), 0);
+                    rc = recv(pollfd[i].fd, incoming, sizeof(buffer), 0);
 
-                    printf("%s\n", buffer);
+                    struct CptRequest *cptRequest;
+                    cptRequest = cpt_parse_request(incoming, (size_t) rc);
 
                     if (rc < 0)
                     {
@@ -282,19 +284,73 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
 
                     len = rc;
 
-//                    rc = send(pollfd[i].fd, buffer, len, 0);
-                    if (rc < 0)
-                    {
-                        perror("  send() failed");
-                        close_conn = TRUE;
-                        break;
+                    switch (cptRequest->command) {
+                        case SEND:
+
+//                            for (int j = 0; j < current_size; ++j) {
+//                                uint8_t *er = malloc(sizeof(uint8_t*));
+//                                struct CptRequest *ads;
+//                                ads = cpt_request_init();
+//                                ads->command = SEND;
+//                                ads->version = 1;
+//                                ads->channel_id = 0;
+//                                ads->msg = cptRequest->msg;
+//                                ads->msg_len = cptRequest->msg_len;
+//
+//                                size_t ad;
+//
+//                                ad = cpt_serialize_request(ads, er);
+//
+//                                rc = send(pollfd[j].fd, er, ad, 0);
+//
+//                                if (rc < 0)
+//                                {
+//                                    perror("  send() failed");
+//                                    close_conn = TRUE;
+//                                    break;
+//                                }
+//                            }
+
+
+                            printf("Send was called\n");
+                            break;
+                        case LOGOUT:
+                            printf("Logout was called\n");
+                            break;
+                        case GET_USERS:
+                            printf("Get users was called\n");
+                            break;
+                        case CREATE_CHANNEL:
+                            printf("Create Channel was called\n");
+                            break;
+                        case JOIN_CHANNEL:
+                            printf("Join Channel was called\n");
+                            break;
+                        case LEAVE_CHANNEL:
+                            printf("Leave channel was called\n");
+                            break;
+                        case LOGIN:
+                            printf("Login was called\n");
+                            break;
+                        default:
+                            printf("Wrong Command\n");
                     }
 
-                    CptRequest
+                    uint8_t *lop = malloc(sizeof(uint8_t*));
 
-                    for(int a=0;a<currentsi; a++){
-                        send(pollfd[i].fd, re)
-                    }
+                    struct CptResponse *cptResponse;
+                    cptResponse = cpt_response_init();
+                    cptResponse->code = SUCCESS;
+                    cptResponse->channel_id = 0;
+                    cptResponse->user_id = (uint16_t) pollfd[i].fd;
+                    cptResponse->msg = " Success";
+                    cptResponse->msg_len = 8;
+                    cptResponse->data_size = 7;
+
+                    size_t server;
+                    server = cpt_serialize_response(cptResponse, lop);
+
+                    rc = send(pollfd[i].fd, lop, server, 0);
 
                 } while(TRUE);
 
@@ -410,25 +466,25 @@ user * create_user(int fd, int id){
 
 
 
-int cpt_login_response(void * server_info, char * name){
+int cpt_login_response(char * name){
     int status = 0;
 
     return status;
 }
-int cpt_logout_response(void * server_info){
+int cpt_logout_response(){
     int status = 0;
 
     return status;
 }
-int cpt_get_users_response(void * server_info, uint16_t channel_id){
+int cpt_get_users_response(uint16_t channel_id){
     int status = 0;
 
     return status;
 }
-int cpt_join_channel_response(void * server_info, uint16_t channel_id) {
+int cpt_join_channel_response(uint16_t channel_id) {
     int status = 0;
 }
-int cpt_send_response(void * server_info, char * name){
+int cpt_send_response(char * name){
     int status = 0;
 
     return status;

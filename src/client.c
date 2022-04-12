@@ -228,10 +228,15 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
 
             if(getchar() == '\n'){
 
-                struct CptRequest *req;
+                uint8_t *buff = malloc(sizeof(uint8_t *));
+
+                size_t reqsize= 0;
+
+                reqsize = cpt_send(buff, send_buf);
+
+                rc = send(sockfd, buff, reqsize, 0);
 
 
-                rc = send(sockfd, send_buf, sizeof(send_buf), 0);
 
                 if (rc < 0)
                 {
@@ -241,11 +246,26 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
 
             }
 
+            uint8_t * incoming = malloc(sizeof(uint8_t*));
 
+            rc = recv(sockfd, incoming, sizeof(recv_buf), 0);
+
+            struct CptResponse *cptResponse;
+            cptResponse = cpt_parse_response(incoming, (size_t) rc);
+            printf("Response message: %s\n", cptResponse->msg);
+            printf("Response message length: %d\n", cptResponse->msg_len);
+            printf("Response channel id %d\n", cptResponse->channel_id);
+            printf("Response user id %d\n", cptResponse->user_id);
+            printf("Response code %d\n", cptResponse->code);
+
+            if (rc < 0)
+            {
+                perror("recv() failed");
+                break;
+            }
         }
 
 
-//        rc = recv(sockfd, recv_buf, sizeof(recv_buf), 0);
 
         if (rc < 0)
         {
@@ -253,7 +273,7 @@ static int run(const struct dc_posix_env *env, struct dc_error *err, struct dc_a
             break;
         }
 
-//        printf("Rec: %s\n", recv_buf);
+        printf("Rec: %s\n", recv_buf);
 
     } while (FALSE);
 
@@ -283,7 +303,7 @@ static void trace_reporter(__attribute__((unused)) const struct dc_posix_env *en
     fprintf(stdout, "TRACE: %s : %s : @ %zu\n", file_name, function_name, line_number);
 }
 
-size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name)
+size_t cpt_login(uint8_t * serial_buf, char * name)
 {
     struct CptRequest * new_req;
     new_req = cpt_request_init();
@@ -295,7 +315,7 @@ size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name)
     return req_size;
 }
 
-size_t cpt_logout(void * client_info, uint8_t * serial_buf)
+size_t cpt_logout(uint8_t * serial_buf)
 {
     struct CptRequest * new_req;
     new_req = cpt_request_init();
@@ -306,7 +326,7 @@ size_t cpt_logout(void * client_info, uint8_t * serial_buf)
     return req_size;
 }
 
-size_t cpt_get_users(void * client_info, uint8_t * serial_buf, uint16_t channel_id)
+size_t cpt_get_users(uint8_t * serial_buf, uint16_t channel_id)
 {
 
     struct CptRequest * new_req;
@@ -320,7 +340,8 @@ size_t cpt_get_users(void * client_info, uint8_t * serial_buf, uint16_t channel_
 
 }
 
-size_t cpt_create_channel(void * client_info, uint8_t * serial_buf, char * user_list){
+size_t cpt_create_channel(uint8_t * serial_buf, char * user_list){
+
     struct CptRequest * new_req;
     new_req = cpt_request_init();
     new_req->channel_id = 0;
@@ -332,7 +353,7 @@ size_t cpt_create_channel(void * client_info, uint8_t * serial_buf, char * user_
     return req_size;
 }
 
-size_t cpt_join_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id){
+size_t cpt_join_channel(uint8_t * serial_buf, uint16_t channel_id){
     struct CptRequest * new_req;
     new_req = cpt_request_init();
     new_req->channel_id = channel_id;
@@ -343,7 +364,7 @@ size_t cpt_join_channel(void * client_info, uint8_t * serial_buf, uint16_t chann
     return req_size;
 }
 
-size_t cpt_leave_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id){
+size_t cpt_leave_channel(uint8_t * serial_buf, uint16_t channel_id){
 
     struct CptRequest * new_req;
     new_req = cpt_request_init();
@@ -356,13 +377,14 @@ size_t cpt_leave_channel(void * client_info, uint8_t * serial_buf, uint16_t chan
 
 }
 
-size_t cpt_send(void * client_info, uint8_t * serial_buf, char * msg)
+size_t cpt_send(uint8_t * serial_buf, char * msg)
 {
     struct CptRequest * new_req;
     new_req = cpt_request_init();
+    new_req->version = 1;
     new_req->msg = msg;
     new_req->command = SEND;
-    new_req->msg_len = sizeof (msg);
+    new_req->msg_len = (uint16_t) strlen(msg);
     size_t req_size;
     req_size = cpt_serialize_request(new_req, serial_buf);
 

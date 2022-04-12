@@ -79,11 +79,10 @@ user * create_user(int fd, int id);
  * updating any necessary information contained within
  * <server_info>.
  *
- * @param server_info   Server data structures and information.
  * @param name          Name of user in received Packet MSG field.
  * @return Status Code (SUCCESS if successful, other if failure).
  */
-int cpt_login_response(void * server_info, char * name);
+int cpt_login_response(char * name);
 
 /**
  * Handle a received 'LOGOUT' protocol message.
@@ -95,10 +94,9 @@ int cpt_login_response(void * server_info, char * name);
  * specified by the user <id> from the GlobalChannel
  * and any other relevant data structures.
  *
- * @param server_info   Server data structures and information.
  * @return Status Code (SUCCESS if successful, other if failure).
  */
-int cpt_logout_response(void * server_info);
+int cpt_logout_response(void);
 
 /**
  * Handle a received 'LOGOUT' protocol message.
@@ -117,11 +115,10 @@ int cpt_logout_response(void * server_info);
  *      2 'Bruce Wayne'
  *      3 'Fakey McFakerson'
  *
- * @param server_info   Server data structures and information.
  * @param channel_id    Target channel ID.
  * @return Status Code (SUCCESS if successful, other if failure).
  */
-int cpt_get_users_response(void * server_info, uint16_t channel_id);
+int cpt_get_users_response(uint16_t channel_id);
 
 /**
  * Handle a received 'JOIN_CHANNEL' protocol message.
@@ -132,11 +129,10 @@ int cpt_get_users_response(void * server_info, uint16_t channel_id);
  * user into the channel specified by the CHANNEL_ID field
  * in the CptPacket <channel_id>.
  *
- * @param server_info   Server data structures and information.
  * @param channel_id    Target channel ID.
  * @return Status Code (SUCCESS if successful, other if failure).
  */
-int cpt_join_channel_response(void * server_info, uint16_t channel_id);
+int cpt_join_channel_response(uint16_t channel_id);
 
 /**
  * Handle a received 'CREATE_CHANNEL' protocol message.
@@ -151,11 +147,10 @@ int cpt_join_channel_response(void * server_info, uint16_t channel_id);
  * If <id_list> is NULL, function will create a new channel with
  * only the requesting user within it.
  *
- * @param server_info   Server data structures and information.
  * @param id_list       ID list from MSG field of received CPT packet.
  * @return Status Code (SUCCESS if successful, other if failure).
  */
-int cpt_create_channel_response(void * server_info, char * id_list);
+int cpt_create_channel_response(char * id_list);
 
 /**
  * Handle a received 'LEAVE_CHANNEL' protocol message.
@@ -166,11 +161,10 @@ int cpt_create_channel_response(void * server_info, char * id_list);
  * specified by the user <id> from the GlobalChannel
  * and any other relevant data structures.
  *
- * @param server_info   Server data structures and information.
  * @param channel_id    Target channel ID.
  * @return Status Code (SUCCESS if successful, other if failure).
  */
-int cpt_leave_channel_response(void * server_info, uint16_t channel_id);
+int cpt_leave_channel_response(uint16_t channel_id);
 
 /**
  * Handle a received 'SEND' protocol message.
@@ -182,11 +176,10 @@ int cpt_leave_channel_response(void * server_info, uint16_t channel_id);
  * MSG field of the received packet to every user in the
  * CHAN_ID field of the received packet.
  *
- * @param server_info   Server data structures and information.
  * @param name          Name of user in received Packet MSG field.
  * @return Status Code (0 if successful, other if failure).
  */
-int cpt_send_response(void * server_info, char * name);
+int cpt_send_response(char * name);
 
 
 #endif //CHAT_ASSIGNMNET_CPT_SERVER_H

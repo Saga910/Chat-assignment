@@ -28,7 +28,7 @@ struct client_info
  * @return The size of the serialized packet in <serial_buf>.
 */
 
-size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name);
+size_t cpt_login(uint8_t * serial_buf, char * name);
 
 /**
  * Prepare a LOGOUT request packet for the server.
@@ -42,7 +42,7 @@ size_t cpt_login(void * client_info, uint8_t * serial_buf, char * name);
  * @param serial_buf     A buffer intended for storing the result.
  * @return Size of the resulting serialized packet in <serial_buf>
 */
-size_t cpt_logout(void * client_info, uint8_t * serial_buf);
+size_t cpt_logout(uint8_t * serial_buf);
 
 /**
  * Prepare a GET_USERS request packet for the server.
@@ -57,7 +57,7 @@ size_t cpt_logout(void * client_info, uint8_t * serial_buf);
  * @param channel_id     The ID of the CHANNEL to get users from.
  * @return Size of the resulting serialized packet in <serial_buf>
 */
-size_t cpt_get_users(void * client_info, uint8_t * serial_buf, uint16_t channel_id);
+size_t cpt_get_users(uint8_t * serial_buf, uint16_t channel_id);
 
 /**
  * Prepare a CREATE_CHANNEL request packet for the server.
@@ -77,7 +77,7 @@ size_t cpt_get_users(void * client_info, uint8_t * serial_buf, uint16_t channel_
  * @param user_list      Whitespace separated user IDs as a string.
  * @return Size of the resulting serialized packet in <serial_buf>
 */
-size_t cpt_create_channel(void * client_info, uint8_t * serial_buf, char * user_list);
+size_t cpt_create_channel(uint8_t * serial_buf, char * user_list);
 
 /**
  * Prepare a JOIN_CHANNEL request packet for the server.
@@ -92,7 +92,7 @@ size_t cpt_create_channel(void * client_info, uint8_t * serial_buf, char * user_
  * @param channel_id     The target channel id.
  * @return Size of the resulting serialized packet in <serial_buf>
 */
-size_t cpt_join_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id);
+size_t cpt_join_channel(uint8_t * serial_buf, uint16_t channel_id);
 
 /**
  * Prepare a LEAVE_CHANNEL request packet for the server.
@@ -107,7 +107,7 @@ size_t cpt_join_channel(void * client_info, uint8_t * serial_buf, uint16_t chann
  * @param channel_id     The target channel id.
  * @return Size of the resulting serialized packet in <serial_buf>
 */
-size_t cpt_leave_channel(void * client_info, uint8_t * serial_buf, uint16_t channel_id);
+size_t cpt_leave_channel(uint8_t * serial_buf, uint16_t channel_id);
 
 /**
  * Prepare a SEND request packet for the server.
@@ -123,7 +123,7 @@ size_t cpt_leave_channel(void * client_info, uint8_t * serial_buf, uint16_t chan
  * @param msg            Intended chat message.
  * @return Size of the resulting serialized packet in <serial_buf>.
 */
-size_t cpt_send(void * client_info, uint8_t * serial_buf, char * msg);
+size_t cpt_send(uint8_t * serial_buf, char * msg);
 
 
 #endif //CHAT_ASSIGNMNET_CPT_CLIENT_H

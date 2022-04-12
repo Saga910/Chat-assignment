@@ -21,33 +21,16 @@
 
 struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size){
     struct CptResponse *res;
-    res = malloc(sizeof (struct CptResponse *));
+    res = malloc(data_size);
 
-    char * res_content = NULL;
-    res_content = malloc(data_size);
-    sprintf(res_content, "%s", res_buf);
+    int * current = (int *) 1;
 
-    char code_arr[8] = {0,};
-    char data_size_arr[16] = {0,};
-    char chanid_arr[16] = {0,};
-    char userid_arr[16] = {0,};
-    char msglen_arr[16] = {0,};
-
-    strncpy(code_arr, res_content, 8);
-    strncpy(data_size_arr, res_content + 8, 16);
-    strncpy(chanid_arr, res_content + 16, 16);
-    strncpy(userid_arr, res_content + 32, 16);
-    strncpy(msglen_arr, res_content + 48, 16);
-
-    res->code = (uint8_t) bin_to_dec(code_arr);
-    res->data_size = (uint16_t) bin_to_dec(data_size_arr);
-    res->channel_id = (uint16_t) bin_to_dec(chanid_arr);
-    res->user_id = (uint16_t) bin_to_dec(userid_arr);
-    res->msg_len = (uint16_t) bin_to_dec(msglen_arr);
-
-    for (int i = 0; i < strlen(res_content) - 64; i++) {
-        res->msg[i] = (uint8_t) res_content[64 + i];
-    }
+    res->code = res_buf[0];
+    res->data_size = unpack_u16(res_buf, current);
+    res->channel_id = unpack_u16(res_buf, current);
+    res->user_id = unpack_u16(res_buf, current);
+    res->msg_len = unpack_u16(res_buf, current);
+    res->msg = &res_buf[8];
 
     return res;
 }
@@ -55,85 +38,78 @@ struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size){
 struct CptRequest * cpt_parse_request(uint8_t * req_buf, size_t req_size){
 
     struct CptRequest *req;
-    req = malloc(sizeof (struct CptRequest *));
+    req = malloc(req_size);
 
-    char * req_content = NULL;
-    req_content = malloc(req_size);
-    sprintf(req_content, "%s", req_buf);
+    int * current = (int *) 2;
 
-    char version_arr[8] = {0,};
-    char command_arr[8] = {0,};
-    char chanid_arr[16] = {0,};
-    char msglen_arr[16] = {0,};
+    req->version = req_buf[0];
+    printf("version = %d\n", req_buf[0]);
+    req->command = req_buf[1];
+    printf("command = %d\n", req_buf[1]);
+    req->channel_id = unpack_u16(req_buf, current);
+    printf("channel id = %d\n", req_buf[2] + req_buf[3]);
+    req->msg_len = unpack_u16(req_buf, current);
+    printf("msg_len = %d\n", req_buf[4] + req_buf[5]);
+    // req->msg = req_buf[6];
 
-    strncpy(version_arr, req_content, 8);
-    strncpy(command_arr, req_content + 8, 8);
-    strncpy(chanid_arr, req_content + 16, 16);
-    strncpy(msglen_arr, req_content + 32, 16);
-
-    req->version = (uint8_t) bin_to_dec(version_arr);
-    req->command = (uint8_t) bin_to_dec(command_arr);
-    req->channel_id = (uint16_t) bin_to_dec(chanid_arr);
-    req->msg_len = (uint16_t) bin_to_dec(msglen_arr);
-    strncpy(req->msg, req_content + 48, req_size);
+    char* temp = strdup(req_buf + 6);
+    printf("res_msg = %s\n", temp);
 
     return req;
 }
 
 size_t cpt_serialize_request(struct CptRequest * req, uint8_t * buffer)
 {
+    uint8_t temp[2];
 
-    char * req_version = uint8_to_bin(req->version);
-    char * req_command = uint8_to_bin(req->command);
-    char * req_chan = uint16_to_bin(req->channel_id);
-    char * req_msglen = uint16_to_bin(req->msg_len);
-
-    char * concat_str = NULL;
-    concat_str = malloc(sizeof(char *) * 6 + req->msg_len + 1);
-    buffer = malloc(sizeof(uint8_t *) + 1);
-
-    sprintf(concat_str, "%s%s%s%s%s", req_version, req_command, req_chan, req_msglen, req->msg);
-    printf("conc: %s\n", concat_str);
-
-    buffer = (uint8_t *) strdup(concat_str);
-    printf("buff: %s\n", buffer);
+    buffer[0] = req->version;
+    buffer[1] = req-> command;
+    pack_u16(req->channel_id, temp);
+    buffer[2] = temp[0];
+    buffer[3] = temp[1];
+    pack_u16(req->msg_len, temp);
+    buffer[4] = temp[0];
+    buffer[5] = temp[1];
 
     size_t req_size;
+
+    for (int i = 0; i < req->msg_len; i++) {
+        buffer[6 + i] = (uint8_t) req->msg[i];
+        printf("buffer[%d] = %c\n", 6 + i, req->msg[i]);
+    }
+
+    buffer[6 + req->msg_len] = '\0';
+
     req_size = 6 + req->msg_len;
 
-    free(concat_str);
-
     return req_size;
-
-
 }
 
 size_t cpt_serialize_response(struct CptResponse * res, uint8_t * buffer)
 {
+    uint8_t temp[2];
 
-        char * res_code = uint8_to_bin(res->code);
-        char * res_data_size = uint16_to_bin(res->data_size);
-        char * res_chan = uint16_to_bin(res->channel_id);
-        char * res_user = uint16_to_bin(res->user_id);
-        char * res_msglen = uint16_to_bin(res->msg_len);
+    buffer[0] = res->code;
+    pack_u16(res->data_size, temp);
+    buffer[1] = temp[0];
+    buffer[2] = temp[1];
+    pack_u16(res->channel_id, temp);
+    buffer[3] = temp[0];
+    buffer[4] = temp[1];
+    pack_u16(res->user_id, temp);
+    buffer[5] = temp[0];
+    buffer[6] = temp[1];
+    pack_u16(res->msg_len, temp);
 
-        char * concat_str = NULL;
-        concat_str = malloc(sizeof(char *) * 6 + res->msg_len + 1);
-        buffer = malloc(sizeof(uint8_t *) + 1);
-
-        sprintf(concat_str, "%s%s%s%s%s%s", res_code, res_data_size, res_chan, res_user, res_msglen, res->msg);
-        printf("conc: %s\n", concat_str);
-
-        buffer = (uint8_t *) strdup(concat_str);
-        printf("buff: %s\n", buffer);
-
-        size_t res_size;
-        res_size = 6 + res->msg_len;
-
-        free(concat_str);
-
-        return res_size;
+    for (int i = 0; i < res->msg_len; i++) {
+        buffer[7 + i] = (uint8_t) res->msg[i];
     }
+
+    size_t res_size;
+    res_size = 7 + res->msg_len;
+
+    return res_size;
+}
 
 struct CptResponse * cpt_response_init(){
     struct CptResponse *res;
@@ -195,6 +171,7 @@ void cpt_request_destroy(struct CptRequest * cpt)
         cpt->msg_len = 0;
         cpt->msg = NULL;
         free(cpt);
+        free(cpt->msg);
         cpt = NULL;
     }
 }
@@ -224,52 +201,38 @@ void cpt_request_reset(struct CptRequest * packet)
     }
 }
 
-char * uint8_to_bin(uint8_t num)
+void pack_u16(uint16_t value, uint8_t buf[2])
 {
-    int bits = 8;
-    char * bin_str;
-    bin_str = malloc(bits + 1);
+    uint16_t sig_byte_mask;
+    uint16_t lsig_byte_mask;
+    uint8_t sig_byte;
+    uint8_t lsig_byte;
 
-    for(int i = bits - 1; i >= 0; i--)
-    {
-        bin_str[i] = (num & 1) + '0';
-        num >>= 1;
-    }
-    bin_str[bits] = '\0';
-    return bin_str;
+    sig_byte_mask = 0b1111111100000000;
+    lsig_byte_mask = 0b0000000011111111;
+
+
+    sig_byte = (uint8_t) ((value & sig_byte_mask) >> 8);
+    lsig_byte = (uint8_t) (value & lsig_byte_mask);
+
+    buf[0] = sig_byte;
+    buf[1] = lsig_byte;
 }
 
-char*  uint16_to_bin(uint16_t num)
+uint16_t unpack_u16(uint8_t * buf, int * count)
 {
-    int bits = 16;
-    char * bin_str;
+    uint16_t byte;
 
-    bin_str = malloc(bits + 1);
+    byte = 0;
+    byte = (uint16_t) (( * buf + byte) << 8);
+    (count)++;
+    buf++;
 
-    for(int i = bits - 1; i >= 0; i--)
-    {
-        bin_str[i] = (num & 1) + '0';
-        num >>= 1;
-    }
-    bin_str[bits] = '\0';
-    return bin_str;
+    byte += ( * buf);
+    buf++;
+
+    return byte;
 }
-
-int bin_to_dec(char * bin_arr)
-{
-    int x;
-    int dec = 0;
-
-    int len = strlen(bin_arr);
-    for (int i = 0; i < len; i++)
-    {
-        x = (i == 0) ? 1 : 2 * x;
-        dec += (bin_arr[len - i - 1] - '0') * x;
-    }
-
-    return dec;
-}
-
 
 
 

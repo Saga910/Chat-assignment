@@ -164,28 +164,19 @@ struct CptResponse * cpt_parse_response(uint8_t * res_buf, size_t data_size);
 struct CptRequest * cpt_parse_request(uint8_t * req_buf, size_t req_size);
 
 /**
- * Helper function that converts uint8_t to a
- * string with the binary representation.
- *
- * @param num
- * @return a binary in string form
+ * Combines two pointers from the buff to the uint16_t.
+ * @param buf the serialized cpt protocol message.
+ * @param count position of the bit.
+ * @return uint16_t combined field made of the buf.
  */
-char * uint8_to_bin(uint8_t num);
+uint16_t unpack_u16(uint8_t * buf, int * count);
+
 /**
- * Helper function that converts uint8_t to a
- * string with the binary representation.
- *
- * @param num
- * @return a binary in string form
+ * Splits the uint16_t to the uint8_t array with bit shifting.
+ * @param value uint16_t from the cpt request.
+ * @param buf the temporary buf array.
  */
-char * uint16_to_bin(uint16_t num);
-/**
- * Helper function that converts binary string
- * to an integer representation.
- *
- * @param str
- * @return a str in integer form
- */
-int bin_to_dec(char * str);
+void pack_u16(uint16_t value, uint8_t buf[2]);
+
 
 #endif // TEMPLATE_COMMON_H
