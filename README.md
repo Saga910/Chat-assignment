@@ -1,3 +1,6 @@
+A concurrent chat server program that implements a custom chat protocol.
+The CPT protocol can be found in the file called `Chat-Protocol-v1.1`.
+
 # Pre Setup
 This Shell progrem uses DC libraries for error handling and error reporting for your POSIX application
 
