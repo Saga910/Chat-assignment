@@ -1,5 +1,7 @@
-# template
-A template for assignments and projects.
+# Pre Setup
+This Shell progrem uses DC libraries for error handling and error reporting for your POSIX application
+
+Clone the [dc_scripts](https://github.com/bcitcstdatacomm/dc_scripts) repository then go into dc_scripts folder and run `./dc-update work gcc g++` this will install the DC libraries into a folder called work. If you have to update go to dc_scripts folder and run `./dc-update work` to update the libraries.
 ## Setup
 ```
 mkdir cmake-build-debug
